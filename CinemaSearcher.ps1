@@ -179,6 +179,16 @@ if(!$FilteredMovies){
     break  
 }
 
-$FilteredMovies | ft -AutoSize -GroupBy CinemaName
+
+$outputFormat = @(
+    @{n='Movie Name'; e={$_.moviename}},
+    @{n='Date'; e={$_.eventDateTime.ToShortDateString()}},
+    @{n='Day'; e={$_.eventDateTime.DayOfWeek}},
+    @{n='Time'; e={$_.eventDateTime.ToShortTimeString()}},
+    @{n='Screen'; e={if($_.auditoriumTinyName){$_.auditoriumTinyName} else{$_.auditorium}}},
+    @{n='Cinema Name'; e={$_.CinemaName}}
+)
+
+$FilteredMovies | select $outputFormat | ft -AutoSize
 
 
