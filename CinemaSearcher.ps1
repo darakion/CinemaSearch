@@ -1,9 +1,4 @@
 
-
-$ImportConfig = Get-Content .\Settings.config | ConvertFrom-Json
-
-
-
 $ListOfCinemas = [pscustomobject]@{
         CName = "CinemaCity-MallOfSofia"; 
         CID = 1261;
@@ -23,9 +18,33 @@ $ListOfCinemas = [pscustomobject]@{
 
 
 
-$MovieName = 'Проектът „Аве Мария“'
+#$MovieName = 'Проектът „Аве Мария“'
 
-$SearchDate = (Get-Date).AddDays(1)
+$Today = (Get-Date)
+$ListOfDates = @()
+$ListOfDates += $Today
+$ListOfDates += 1..7 | foreach {(Get-date).AddDays($_)}
+
+$Thursday = $ListOfDates | where DayOfWeek -like "Thursday"
+
+$RangeOfDates = $ListOfDates | where {$_ -ge $Today -and $_ -le $Thursday}
+
+$index1 = 0
+$RangeOfDatesFormatted = $RangeOfDates | foreach {$index1++ ;  $_ | select @{n='Index';e={$index1}},DayOfWeek,@{n='DateF';e={$_.ToShortDateString()}},Date}
+
+Write-Host "$($RangeOfDatesFormatted | ft Index,DayOfWeek,DateF -AutoSize | Out-String)"
+
+Remove-Variable MovieByChoice,MovieIndexChoice -ErrorAction SilentlyContinue
+$DateIndexChoice = Read-Host "Choose date by specifying Index number"
+
+$SearchDate = $RangeOfDatesFormatted | where index -EQ $DateIndexChoice
+
+if(!$SearchDate){
+    Write-Warning "Can't find movies for that date id - $DateIndexChoice"
+    break
+}
+
+Write-Host "Date chosen: $($SearchDate | ft Index,DayOfWeek,DateF -AutoSize -HideTableHeaders | Out-String)"
 
 <#
 # Source - https://stackoverflow.com/a/51774034
@@ -47,7 +66,7 @@ $fileUploadPage = Invoke-WebRequest -Uri $fileUploadurl -WebSession $login
 ####CinemaCity#####
 
 #Rearch for showing:
-$CinemaCityDate = $SearchDate.ToString("yyyy-MM-dd")
+$CinemaCityDate = $SearchDate.Date.ToString("yyyy-MM-dd")
 
 $MoviesListCinemaCity = @()
 
@@ -61,21 +80,19 @@ $report = foreach ($Cinema in $ListOfCinemas | where cname -like 'CinemaCity*'){
 
     $response = Invoke-RestMethod -Uri "www.cinemacity.bg/bg/data-api-service/v1/quickbook/10106/film-events/in-cinema/$($Cinema.CID)/at-date/$CinemaCityDate" -Headers $headers -Method Get
 
-    $MoviesListCinemaCity += $response.body.films
+    $MoviesListCinemaCity = $($MoviesListCinemaCity;$response.body.films) | sort name -Unique
 
     $response.body.events | select @{n='MovieName';e={$event = $_ ; ($Response.body.films | where id -like $event.filmid).name}},
         filmId,eventDateTime,auditorium,auditoriumTinyName,@{n='CinemaName';e={$Cinema.DisplayName}}
 
 }
 
-$index = 0
-$MoviesListCinemaCityFormatted = $MoviesListCinemaCity | sort name -Unique | foreach {$index++ ;  $_ |select @{n='Index';e={$index}},Name,id,releaseDate,releaseYear,@{n='Length in minutes';e={$_.Length.ToString('# Min')}}}
-
-
+$index2 = 0
+$MoviesListCinemaCityFormatted = $MoviesListCinemaCity | sort name -Unique | foreach {$index2++ ;  $_ |select @{n='Index';e={$index2}},Name,id,releaseDate,releaseYear,@{n='Length in minutes';e={$_.Length.ToString('# Min')}}}
 
 Write-Host "$($MoviesListCinemaCityFormatted | ft -AutoSize | Out-String)"
 
-Remove-Variable MovieByChoice,MovieIndexChoice
+Remove-Variable MovieByChoice,MovieIndexChoice -ErrorAction SilentlyContinue
 $MovieIndexChoice = Read-Host "Choose Movie name by specifying Index number"
 
 $MovieByChoice = $MoviesListCinemaCityFormatted | where index -EQ $MovieIndexChoice
