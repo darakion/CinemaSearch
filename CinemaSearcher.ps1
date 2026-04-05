@@ -1,4 +1,6 @@
 
+$finalReport = @()
+
 $ListOfCinemas = [pscustomobject]@{
         CName = "CinemaCity-MallOfSofia"; 
         CID = 1261;
@@ -13,7 +15,20 @@ $ListOfCinemas = [pscustomobject]@{
         LocationURI = 'https://www.cinemacity.bg/cinemas/paradisecenter/1266';
         DisplayName = 'Cinema City - Paradice Center'
     },
-    [pscustomobject]@{CName = "CineGrand"; HomeAddress = 'https://cinegrand.bg/'},
+    [pscustomobject]@{
+        CName = "CineGrand-ParkCenter"; 
+        CID = 0;
+        HomeAddress = 'https://cinegrand.bg/';
+        LocationURI = 'https://cinegrand.bg/%D0%BF%D0%B0%D1%80%D0%BA-%D1%86%D0%B5%D0%BD%D1%82%D1%8A%D1%80-%D1%81%D0%BE%D1%84%D0%B8%D1%8F/schedule';
+        DisplayName = 'Cine Grand - Park Center'
+    },
+        [pscustomobject]@{
+        CName = "CineGrand-SofiaRingMall"; 
+        CID = 0;
+        HomeAddress = 'https://cinegrand.bg/';
+        LocationURI = 'https://cinegrand.bg/%D1%81%D0%BE%D1%84%D0%B8%D1%8F-%D1%80%D0%B8%D0%BD%D0%B3-%D0%BC%D0%BE%D0%BB/schedule';
+        DisplayName = 'Cinema City - Sofia Ring Mall'
+    },
     [pscustomobject]@{CName = "KinoArena"; HomeAddress = 'https://www.kinoarena.com/'}
 
 
@@ -87,20 +102,83 @@ $report = foreach ($Cinema in $ListOfCinemas | where cname -like 'CinemaCity*'){
 
 }
 
-$index2 = 0
-$MoviesListCinemaCityFormatted = $MoviesListCinemaCity | sort name -Unique | foreach {$index2++ ;  $_ |select @{n='Index';e={$index2}},Name,id,releaseDate,releaseYear,@{n='Length in minutes';e={$_.Length.ToString('# Min')}}}
 
-Write-Host "$($MoviesListCinemaCityFormatted | ft -AutoSize | Out-String)"
+#$report | where MovieName -like ($MoviesListCinemaCityFormatted | where index -EQ $MovieIndexChoice).name | ft -AutoSize -GroupBy cinemaname
+$finalReport += $report
 
-Remove-Variable MovieByChoice,MovieIndexChoice -ErrorAction SilentlyContinue
-$MovieIndexChoice = Read-Host "Choose Movie name by specifying Index number"
 
-$MovieByChoice = $MoviesListCinemaCityFormatted | where index -EQ $MovieIndexChoice
+####Cinegrand#####
 
-if(!$MovieByChoice){
-    Write-Warning "Can't find movie with Index id - $MovieIndexChoice"
-    break
+<#$DatesTranslateHash = @{
+    Monday = 'понеделник'
+    Tuesday = 'вторник'
+    Wednesday = 'сряда'
+    Thursday = 'четвъртък'
+    Friday = 'петък'
+    Saturday = 'събота'
+    Sunday = 'неделя'
+}
+#>
+
+#Rearch for showing:
+$CineGrandDate = "$($SearchDate.Date.ToString("dddd"))-$($SearchDate.date.DayOfWeek.value__)"
+
+$CineGrandDateURI = [uri]::EscapeDataString($CineGrandDate)
+
+
+#$MoviesListCinemaCity = @()
+
+$report2 = foreach ($Cinema in $ListOfCinemas | where cname -like 'CineGrand*'){
+    $uri = "$($Cinema.LocationURI)-$CineGrandDateURI"
+
+    $request = Invoke-WebRequest -Uri $uri -UseBasicParsing
+    $HTML = New-Object -Com "HTMLFile"
+    [string]$htmlBody = $request.Content
+    $HTML.write([ref]$htmlBody)
+    $filter = $HTML.getElementsByClassName("btn btn-sm btn-outline-dark show-time fs no-outline valid ")
+
+    $CineGrandOutput = foreach ($HtmlResult in $filter){
+        [pscustomobject]@{
+            MovieName = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'data-movie'}).Value
+            eventDateTime = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'data-run'}).Value | Get-Date
+            auditorium = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'title'}).Value.split(',')[-1].trim()
+            #auditoriumTinyName = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'title'}).Value.split(',')[-1].trim()
+            CinemaName = $Cinema.DisplayName
+        }
+    }
+
+
+    $CineGrandOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName
+
 }
 
-$report | where MovieName -like ($MoviesListCinemaCityFormatted | where index -EQ $MovieIndexChoice).name | ft -AutoSize -GroupBy cinemaname
+
+
+$finalReport += $report2
+
+
+
+$index2 = 0
+$MoviesListFormatted = $finalReport | sort MovieName -Unique | foreach {$index2++ ;  $_ | select @{n='Index';e={$index2}},MovieName}
+
+
+
+Write-Host "$($MoviesListFormatted | ft -AutoSize | Out-String)"
+
+Remove-Variable MovieByChoice,MovieIndexChoice -ErrorAction SilentlyContinue
+$MovieFilter = Read-Host "Enter part of the movie name to filter the output, leave empty for no filter"
+
+if($MovieFilter){
+    $FilteredMovies = $finalReport | where moviename -Like "*$MovieFilter*"
+}
+else{$FilteredMovies = $finalReport}
+
+
+if(!$FilteredMovies){
+    Write-Warning "No movie found that contains '$moviefilter' in its name."  
+    break  
+}
+
+$FilteredMovies | ft -AutoSize -GroupBy CinemaName
+
 
