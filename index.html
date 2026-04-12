@@ -5,88 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cinema Listings</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      margin: 0;
-      padding: 12px;
-      background: #f5f5f5;
-    }
+<style>
+  body {
+    font-family: Arial;
+    margin: 0;
+    padding: 12px;
+    background: #f5f5f5;
+  }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 10px;
-    }
+  h1 {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  select, input {
+    padding: 10px;
+    font-size: 16px; /* prevents iOS zoom */
+    min-width: 160px;
+  }
+
+  /* =========================
+     TABLE WRAPPER (IMPORTANT)
+     ========================= */
+  .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px; /* forces scroll on mobile */
+  }
+
+  th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    background: #333;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  /* =========================
+     MOBILE IMPROVEMENTS
+     ========================= */
+  @media (max-width: 600px) {
 
     .filters {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
-      justify-content: center;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: stretch;
     }
 
     select, input {
-      padding: 10px;
-      font-size: 16px; /* better for mobile */
-      min-width: 160px;
+      width: 100%;
     }
 
-    /* ===== CARD GRID ===== */
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-
-    @media (min-width: 700px) {
-      .grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    @media (min-width: 1100px) {
-      .grid {
-        grid-template-columns: 1fr 1fr 1fr;
-      }
-    }
-
-    /* ===== CARD STYLE ===== */
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      border: 1px solid #e6e6e6;
-    }
-
-    .title {
-      font-weight: bold;
-      font-size: 16px;
-      margin-bottom: 6px;
-    }
-
-    .meta {
-      color: #555;
+    /* Make table feel better on small screens */
+    th, td {
       font-size: 14px;
-      line-height: 1.4;
+      padding: 8px;
     }
 
-    .cinema {
-      margin-top: 6px;
-      font-size: 13px;
-      opacity: 0.8;
+    table {
+      min-width: 650px; /* still scrollable but tighter */
     }
-
-    .badge {
-      display: inline-block;
-      padding: 3px 8px;
-      background: #eee;
-      border-radius: 8px;
-      font-size: 12px;
-      margin-top: 6px;
-    }
-  </style>
+  }
+</style>
 </head>
 
 <body>
