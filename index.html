@@ -28,13 +28,11 @@
 
     select, input {
       padding: 10px;
-      font-size: 16px; /* prevents iOS zoom */
+      font-size: 16px;
       min-width: 160px;
     }
 
-    /* =========================
-       TABLE WRAPPER (mobile-friendly)
-       ========================= */
+    /* Table wrapper for mobile scrolling */
     .table-wrapper {
       width: 100%;
       overflow-x: auto;
@@ -47,7 +45,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 750px; /* forces horizontal scroll on small screens */
+      min-width: 750px;
     }
 
     th, td {
@@ -65,7 +63,6 @@
       z-index: 2;
     }
 
-    /* Slight mobile tuning */
     @media (max-width: 600px) {
       .filters {
         flex-direction: column;
@@ -98,11 +95,9 @@
   </select>
 
   <input type="date" id="dateFilter">
-
   <input type="text" id="movieFilter" placeholder="Search movie...">
 </div>
 
-<!-- TABLE WRAPPER ADDED -->
 <div class="table-wrapper">
   <table id="table">
     <thead>
@@ -124,7 +119,7 @@
 <script>
 let allData = [];
 
-// Convert "12.4.2026 г." → "2026-04-12"
+/* Convert "12.4.2026 г." → "2026-04-12" */
 function normalizeDate(dateStr) {
   if (!dateStr) return "";
 
@@ -134,7 +129,14 @@ function normalizeDate(dateStr) {
   return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
-// Load CSV
+/* Proper DateTime parser for sorting */
+function parseDateTime(row) {
+  const date = row.normalizedDate;
+  const time = row["Time"] || "00:00";
+  return new Date(`${date}T${time}:00`);
+}
+
+/* Load CSV */
 Papa.parse("data.csv", {
   download: true,
   header: true,
@@ -145,14 +147,15 @@ Papa.parse("data.csv", {
       .map(row => ({
         ...row,
         normalizedDate: normalizeDate(row["Date"])
-      }));
+      }))
+      .sort((a, b) => parseDateTime(a) - parseDateTime(b)); // ✅ GLOBAL SORT FIX
 
     populateCinemaFilter();
     renderTable(allData);
   }
 });
 
-// Populate cinema dropdown
+/* Populate cinema dropdown */
 function populateCinemaFilter() {
   const cinemas = [...new Set(allData.map(d => d["Cinema Name"]))];
   const select = document.getElementById("cinemaFilter");
@@ -165,7 +168,7 @@ function populateCinemaFilter() {
   });
 }
 
-// Render table
+/* Render table */
 function renderTable(data) {
   const tbody = document.querySelector("#table tbody");
   tbody.innerHTML = "";
@@ -186,24 +189,26 @@ function renderTable(data) {
   });
 }
 
-// Apply filters
+/* Apply filters + KEEP SORT ORDER */
 function applyFilters() {
   const cinema = document.getElementById("cinemaFilter").value;
   const date = document.getElementById("dateFilter").value;
   const movie = document.getElementById("movieFilter").value.toLowerCase();
 
-  const filtered = allData.filter(row => {
-    return (
-      (!cinema || row["Cinema Name"] === cinema) &&
-      (!date || row.normalizedDate === date) &&
-      (!movie || row["Movie Name"].toLowerCase().includes(movie))
-    );
-  });
+  const filtered = allData
+    .filter(row => {
+      return (
+        (!cinema || row["Cinema Name"] === cinema) &&
+        (!date || row.normalizedDate === date) &&
+        (!movie || row["Movie Name"].toLowerCase().includes(movie))
+      );
+    })
+    .sort((a, b) => parseDateTime(a) - parseDateTime(b)); // ✅ KEEP ORDER AFTER FILTER
 
   renderTable(filtered);
 }
 
-// Events
+/* Events */
 document.getElementById("cinemaFilter").addEventListener("change", applyFilters);
 document.getElementById("dateFilter").addEventListener("change", applyFilters);
 document.getElementById("movieFilter").addEventListener("input", applyFilters);
