@@ -32,29 +32,24 @@
       min-width: 160px;
     }
 
-    /* Date wrapper with placeholder */
-    .date-wrapper {
-      position: relative;
-      min-width: 160px;
+    /* Simple placeholder styling fix for date input */
+    input[type="date"]:invalid {
+      color: #888;
     }
 
-    .date-wrapper input {
-      width: 100%;
-    }
-
-    .date-placeholder {
+    /* Make empty date show "Date" text via CSS hack */
+    input[type="date"]::before {
+      content: "Date";
       position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
       color: #888;
       pointer-events: none;
-      font-size: 16px;
-      transition: 0.2s ease;
+      transform: translate(10px, 10px);
     }
 
-    .date-wrapper.filled .date-placeholder {
+    input[type="date"]:focus::before,
+    input[type="date"]:valid::before {
       display: none;
+      content: "";
     }
 
     /* Table wrapper for mobile scrolling */
@@ -119,10 +114,7 @@
     <option value="">All Cinemas</option>
   </select>
 
-  <div class="date-wrapper">
-    <input type="date" id="dateFilter">
-    <span class="date-placeholder">Date</span>
-  </div>
+  <input type="date" id="dateFilter">
 
   <input type="text" id="movieFilter" placeholder="Search movie...">
 </div>
@@ -148,7 +140,6 @@
 <script>
 let allData = [];
 
-/* Normalize date: "12.4.2026 г." → "2026-04-12" */
 function normalizeDate(dateStr) {
   if (!dateStr) return "";
 
@@ -158,14 +149,12 @@ function normalizeDate(dateStr) {
   return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
-/* Parse datetime for correct sorting */
 function parseDateTime(row) {
   const date = row.normalizedDate;
   const time = row["Time"] || "00:00";
   return new Date(`${date}T${time}:00`);
 }
 
-/* Load CSV */
 Papa.parse("data.csv", {
   download: true,
   header: true,
@@ -181,11 +170,9 @@ Papa.parse("data.csv", {
 
     populateCinemaFilter();
     renderTable(allData);
-    updateDatePlaceholder();
   }
 });
 
-/* Populate cinema dropdown */
 function populateCinemaFilter() {
   const cinemas = [...new Set(allData.map(d => d["Cinema Name"]))];
   const select = document.getElementById("cinemaFilter");
@@ -198,7 +185,6 @@ function populateCinemaFilter() {
   });
 }
 
-/* Render table */
 function renderTable(data) {
   const tbody = document.querySelector("#table tbody");
   tbody.innerHTML = "";
@@ -219,7 +205,6 @@ function renderTable(data) {
   });
 }
 
-/* Apply filters */
 function applyFilters() {
   const cinema = document.getElementById("cinemaFilter").value;
   const date = document.getElementById("dateFilter").value;
@@ -238,31 +223,9 @@ function applyFilters() {
   renderTable(filtered);
 }
 
-/* Date placeholder logic */
-const dateInput = document.getElementById("dateFilter");
-const dateWrapper = document.querySelector(".date-wrapper");
-const movieFilter = document.getElementById("movieFilter");
-const cinemaFilter = document.getElementById("cinemaFilter");
-
-function updateDatePlaceholder() {
-  if (dateInput.value) {
-    dateWrapper.classList.add("filled");
-  } else {
-    dateWrapper.classList.remove("filled");
-  }
-}
-
-/* Events */
-cinemaFilter.addEventListener("change", applyFilters);
-
-dateInput.addEventListener("change", () => {
-  updateDatePlaceholder();
-  applyFilters();
-});
-
-dateInput.addEventListener("input", updateDatePlaceholder);
-
-movieFilter.addEventListener("input", applyFilters);
+document.getElementById("cinemaFilter").addEventListener("change", applyFilters);
+document.getElementById("dateFilter").addEventListener("change", applyFilters);
+document.getElementById("movieFilter").addEventListener("input", applyFilters);
 
 </script>
 
