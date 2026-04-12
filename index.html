@@ -44,9 +44,7 @@
       min-width: 160px;
     }
 
-    /* =========================
-       TABLE VIEW
-    ========================= */
+    /* TABLE VIEW */
     .table-wrapper {
       width: 100%;
       overflow-x: auto;
@@ -76,9 +74,7 @@
       top: 0;
     }
 
-    /* =========================
-       CARD VIEW (mobile mode)
-    ========================= */
+    /* CARD VIEW */
     .grid {
       display: none;
       grid-template-columns: 1fr;
@@ -110,9 +106,7 @@
       opacity: 0.8;
     }
 
-    /* =========================
-       TOGGLE MODE
-    ========================= */
+    /* TOGGLE MODE */
     body.card-mode .table-wrapper {
       display: none;
     }
@@ -121,9 +115,7 @@
       display: grid;
     }
 
-    /* =========================
-       FILTER MOBILE FIX
-    ========================= */
+    /* MOBILE */
     @media (max-width: 600px) {
       .filters {
         flex-direction: column;
@@ -158,7 +150,6 @@
   <input type="text" id="movieFilter" placeholder="Search movie...">
 </div>
 
-<!-- TABLE VIEW -->
 <div class="table-wrapper">
   <table id="table">
     <thead>
@@ -175,7 +166,6 @@
   </table>
 </div>
 
-<!-- CARD VIEW -->
 <div id="grid" class="grid"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -183,19 +173,26 @@
 <script>
 let allData = [];
 
+/* Normalize date */
 function normalizeDate(dateStr) {
   if (!dateStr) return "";
-
   const clean = dateStr.replace(" г.", "");
   const [day, month, year] = clean.split(".");
-
   return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
+/* Sort helper */
 function parseDateTime(row) {
   const date = row.normalizedDate;
   const time = row["Time"] || "00:00";
   return new Date(`${date}T${time}:00`);
+}
+
+/* RESET FILTERS */
+function resetFilters() {
+  document.getElementById("cinemaFilter").value = "";
+  document.getElementById("dateFilter").value = "";
+  document.getElementById("movieFilter").value = "";
 }
 
 /* LOAD DATA */
@@ -212,6 +209,7 @@ Papa.parse("data.csv", {
       }))
       .sort((a, b) => parseDateTime(a) - parseDateTime(b));
 
+    resetFilters(); // ✅ FIX: clear filters on load
     populateCinemaFilter();
     renderAll(allData);
   }
