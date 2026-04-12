@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cinema Listings</title>
+
+  <!-- Simple styling -->
+  <style>
+    body {
+      font-family: Arial;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+
+    select, input {
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background: #333;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🎬 Cinema Listings</h1>
+
+<div class="filters">
+  <select id="cinemaFilter">
+    <option value="">All Cinemas</option>
+  </select>
+
+  <input type="date" id="dateFilter">
+
+  <input type="text" id="movieFilter" placeholder="Search movie...">
+</div>
+
+<table id="table">
+  <thead>
+    <tr>
+      <th>Movie</th>
+      <th>Date</th>
+      <th>Cinema</th>
+      <th>Auditorium</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<!-- PapaParse for CSV -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<script>
+let allData = [];
+
+Papa.parse("data.csv", {
+  download: true,
+  header: true,
+  complete: function(results) {
+    allData = results.data;
+    populateCinemaFilter();
+    renderTable(allData);
+  }
+});
+
+function populateCinemaFilter() {
+  const cinemas = [...new Set(allData.map(d => d.CinemaName))];
+  const select = document.getElementById("cinemaFilter");
+
+  cinemas.forEach(cinema => {
+    const option = document.createElement("option");
+    option.value = cinema;
+    option.textContent = cinema;
+    select.appendChild(option);
+  });
+}
+
+function renderTable(data) {
+  const tbody = document.querySelector("#table tbody");
+  tbody.innerHTML = "";
+
+  data.forEach(row => {
+    const tr = document.createElement("tr");
+
+    const date = new Date(row.eventDateTime);
+
+    tr.innerHTML = `
+      <td>${row.MovieName}</td>
+      <td>${date.toLocaleString()}</td>
+      <td>${row.CinemaName}</td>
+      <td>${row.auditorium}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function applyFilters() {
+  const cinema = document.getElementById("cinemaFilter").value;
+  const date = document.getElementById("dateFilter").value;
+  const movie = document.getElementById("movieFilter").value.toLowerCase();
+
+  let filtered = allData.filter(row => {
+    const rowDate = new Date(row.eventDateTime);
+
+    return (
+      (!cinema || row.CinemaName === cinema) &&
+      (!date || rowDate.toISOString().slice(0,10) === date) &&
+      (!movie || row.MovieName.toLowerCase().includes(movie))
+    );
+  });
+
+  renderTable(filtered);
+}
+
+document.getElementById("cinemaFilter").addEventListener("change", applyFilters);
+document.getElementById("dateFilter").addEventListener("change", applyFilters);
+document.getElementById("movieFilter").addEventListener("input", applyFilters);
+</script>
+
+</body>
+</html>
