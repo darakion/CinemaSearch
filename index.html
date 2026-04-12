@@ -20,6 +20,7 @@
       gap: 10px;
       margin-bottom: 20px;
       justify-content: center;
+      flex-wrap: wrap;
     }
 
     select, input {
@@ -77,20 +78,49 @@
 <script>
 let allData = [];
 
+// Format date as yyyy.MM.dd
+function formatDate(dt) {
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  return `${y}.${m}.${d}`;
+}
+
+// Get Monday-based weekday index (Mon=0, Sun=6)
+function getWeekdayIndex(dt) {
+  return (dt.getDay() + 6) % 7;
+}
+
 // Load CSV
 Papa.parse("data.csv", {
   download: true,
   header: true,
   complete: function(results) {
-    allData = results.data.map(row => {
-      const dt = new Date(row["DateTime"]);
 
-      return {
-        ...row,
-        parsedDate: dt,
-        dateOnly: dt.toISOString().slice(0, 10) // YYYY-MM-DD for filtering
-      };
-    });
+    allData = results.data
+      .filter(row => row["Movie Name"])
+      .map(row => {
+        const dt = new Date(row["DateTime"]);
+
+        if (isNaN(dt)) {
+          console.warn("Invalid date:", row["DateTime"]);
+        }
+
+        // LOCAL date (fix timezone issue)
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, "0");
+        const day = String(dt.getDate()).padStart(2, "0");
+
+        return {
+          ...row,
+          parsedDate: dt,
+          dateOnly: `${year}-${month}-${day}`,
+          formattedDate: formatDate(dt),
+          weekdayIndex: getWeekdayIndex(dt)
+        };
+      });
+
+    console.log("Loaded rows:", allData.length);
 
     populateCinemaFilter();
     renderTable(allData);
@@ -110,19 +140,31 @@ function populateCinemaFilter() {
   });
 }
 
-// Render table (ONLY required columns)
+// Sort by Date → Time
+function sortData(data) {
+  return data.sort((a, b) => {
+    if (a.parsedDate - b.parsedDate !== 0) {
+      return a.parsedDate - b.parsedDate;
+    }
+    return a["Time"].localeCompare(b["Time"]);
+  });
+}
+
+// Render table
 function renderTable(data) {
   const tbody = document.querySelector("#table tbody");
   tbody.innerHTML = "";
 
-  data.forEach(row => {
+  const sorted = sortData([...data]);
+
+  sorted.forEach(row => {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
       <td>${row["Movie Name"]}</td>
       <td>${row["Day"]}</td>
       <td>${row["Time"]}</td>
-      <td>${row["Date"]}</td>
+      <td>${row.formattedDate}</td>
       <td>${row["Screen"]}</td>
       <td>${row["Cinema Name"]}</td>
     `;
@@ -140,7 +182,7 @@ function applyFilters() {
   const filtered = allData.filter(row => {
     return (
       (!cinema || row["Cinema Name"] === cinema) &&
-      (!date || row.dateOnly === date) && // ✅ using DateTime-derived value
+      (!date || row.dateOnly === date) &&
       (!movie || row["Movie Name"].toLowerCase().includes(movie))
     );
   });
