@@ -2,49 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cinema Listings</title>
 
   <style>
     body {
       font-family: Arial;
-      margin: 20px;
+      margin: 0;
+      padding: 12px;
       background: #f5f5f5;
     }
 
     h1 {
       text-align: center;
+      margin-bottom: 10px;
     }
 
     .filters {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       justify-content: center;
       flex-wrap: wrap;
     }
 
     select, input {
-      padding: 8px;
-      font-size: 14px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-    }
-
-    th, td {
       padding: 10px;
-      border: 1px solid #ddd;
+      font-size: 16px; /* better for mobile */
+      min-width: 160px;
     }
 
-    th {
-      background: #333;
-      color: white;
+    /* ===== CARD GRID ===== */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    @media (min-width: 700px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (min-width: 1100px) {
+      .grid {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
+
+    /* ===== CARD STYLE ===== */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #e6e6e6;
+    }
+
+    .title {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .meta {
+      color: #555;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .cinema {
+      margin-top: 6px;
+      font-size: 13px;
+      opacity: 0.8;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #eee;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-top: 6px;
     }
   </style>
 </head>
+
 <body>
 
 <h1>🎬 Cinema Listings</h1>
@@ -59,19 +103,8 @@
   <input type="text" id="movieFilter" placeholder="Search movie...">
 </div>
 
-<table id="table">
-  <thead>
-    <tr>
-      <th>Movie Name</th>
-      <th>Day</th>
-      <th>Time</th>
-      <th>Date</th>
-      <th>Screen</th>
-      <th>Cinema Name</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<!-- REPLACED TABLE WITH GRID -->
+<div id="grid" class="grid"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
@@ -101,10 +134,8 @@ Papa.parse("data.csv", {
         normalizedDate: normalizeDate(row["Date"])
       }));
 
-    console.log("Loaded rows:", allData.length);
-
     populateCinemaFilter();
-    renderTable(allData);
+    renderGrid(allData);
   }
 });
 
@@ -121,24 +152,28 @@ function populateCinemaFilter() {
   });
 }
 
-// Render table
-function renderTable(data) {
-  const tbody = document.querySelector("#table tbody");
-  tbody.innerHTML = "";
+// Render cards
+function renderGrid(data) {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
 
   data.forEach(row => {
-    const tr = document.createElement("tr");
+    const card = document.createElement("div");
+    card.className = "card";
 
-    tr.innerHTML = `
-      <td>${row["Movie Name"]}</td>
-      <td>${row["Day"]}</td>
-      <td>${row["Time"]}</td>
-      <td>${row["Date"]}</td>
-      <td>${row["Screen"]}</td>
-      <td>${row["Cinema Name"]}</td>
+    card.innerHTML = `
+      <div class="title">${row["Movie Name"]}</div>
+      
+      <div class="meta">
+        🕒 ${row["Time"]} · ${row["Day"]}<br>
+        📅 ${row["Date"]}<br>
+        🎬 ${row["Screen"]}
+      </div>
+
+      <div class="cinema">${row["Cinema Name"]}</div>
     `;
 
-    tbody.appendChild(tr);
+    grid.appendChild(card);
   });
 }
 
@@ -156,13 +191,14 @@ function applyFilters() {
     );
   });
 
-  renderTable(filtered);
+  renderGrid(filtered);
 }
 
 // Events
 document.getElementById("cinemaFilter").addEventListener("change", applyFilters);
 document.getElementById("dateFilter").addEventListener("change", applyFilters);
 document.getElementById("movieFilter").addEventListener("input", applyFilters);
+
 </script>
 
 </body>
