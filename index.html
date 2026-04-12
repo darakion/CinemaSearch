@@ -18,6 +18,18 @@
       margin-bottom: 10px;
     }
 
+    .top-bar {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
     .filters {
       display: flex;
       gap: 10px;
@@ -32,27 +44,9 @@
       min-width: 160px;
     }
 
-    /* Simple placeholder styling fix for date input */
-    input[type="date"]:invalid {
-      color: #888;
-    }
-
-    /* Make empty date show "Date" text via CSS hack */
-    input[type="date"]::before {
-      content: "Date";
-      position: absolute;
-      color: #888;
-      pointer-events: none;
-      transform: translate(10px, 10px);
-    }
-
-    input[type="date"]:focus::before,
-    input[type="date"]:valid::before {
-      display: none;
-      content: "";
-    }
-
-    /* Table wrapper for mobile scrolling */
+    /* =========================
+       TABLE VIEW
+    ========================= */
     .table-wrapper {
       width: 100%;
       overflow-x: auto;
@@ -80,9 +74,56 @@
       color: white;
       position: sticky;
       top: 0;
-      z-index: 2;
     }
 
+    /* =========================
+       CARD VIEW (mobile mode)
+    ========================= */
+    .grid {
+      display: none;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .card {
+      background: white;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #e6e6e6;
+    }
+
+    .title {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .meta {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.4;
+    }
+
+    .cinema {
+      margin-top: 6px;
+      font-size: 13px;
+      opacity: 0.8;
+    }
+
+    /* =========================
+       TOGGLE MODE
+    ========================= */
+    body.card-mode .table-wrapper {
+      display: none;
+    }
+
+    body.card-mode .grid {
+      display: grid;
+    }
+
+    /* =========================
+       FILTER MOBILE FIX
+    ========================= */
     @media (max-width: 600px) {
       .filters {
         flex-direction: column;
@@ -91,11 +132,6 @@
 
       select, input {
         width: 100%;
-      }
-
-      th, td {
-        font-size: 14px;
-        padding: 8px;
       }
 
       table {
@@ -109,16 +145,20 @@
 
 <h1>🎬 Cinema Listings</h1>
 
+<div class="top-bar">
+  <button onclick="toggleLayout()">Switch Layout</button>
+</div>
+
 <div class="filters">
   <select id="cinemaFilter">
     <option value="">All Cinemas</option>
   </select>
 
   <input type="date" id="dateFilter">
-
   <input type="text" id="movieFilter" placeholder="Search movie...">
 </div>
 
+<!-- TABLE VIEW -->
 <div class="table-wrapper">
   <table id="table">
     <thead>
@@ -134,6 +174,9 @@
     <tbody></tbody>
   </table>
 </div>
+
+<!-- CARD VIEW -->
+<div id="grid" class="grid"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
@@ -155,36 +198,51 @@ function parseDateTime(row) {
   return new Date(`${date}T${time}:00`);
 }
 
+/* LOAD DATA */
 Papa.parse("data.csv", {
   download: true,
   header: true,
   complete: function(results) {
 
     allData = results.data
-      .filter(row => row["Movie Name"])
-      .map(row => ({
-        ...row,
-        normalizedDate: normalizeDate(row["Date"])
+      .filter(r => r["Movie Name"])
+      .map(r => ({
+        ...r,
+        normalizedDate: normalizeDate(r["Date"])
       }))
       .sort((a, b) => parseDateTime(a) - parseDateTime(b));
 
     populateCinemaFilter();
-    renderTable(allData);
+    renderAll(allData);
   }
 });
 
-function populateCinemaFilter() {
-  const cinemas = [...new Set(allData.map(d => d["Cinema Name"]))];
-  const select = document.getElementById("cinemaFilter");
+/* FILTERS */
+function applyFilters() {
+  const cinema = document.getElementById("cinemaFilter").value;
+  const date = document.getElementById("dateFilter").value;
+  const movie = document.getElementById("movieFilter").value.toLowerCase();
 
-  cinemas.forEach(cinema => {
-    const option = document.createElement("option");
-    option.value = cinema;
-    option.textContent = cinema;
-    select.appendChild(option);
-  });
+  const filtered = allData
+    .filter(r => {
+      return (
+        (!cinema || r["Cinema Name"] === cinema) &&
+        (!date || r.normalizedDate === date) &&
+        (!movie || r["Movie Name"].toLowerCase().includes(movie))
+      );
+    })
+    .sort((a, b) => parseDateTime(a) - parseDateTime(b));
+
+  renderAll(filtered);
 }
 
+/* RENDER BOTH VIEWS */
+function renderAll(data) {
+  renderTable(data);
+  renderGrid(data);
+}
+
+/* TABLE */
 function renderTable(data) {
   const tbody = document.querySelector("#table tbody");
   tbody.innerHTML = "";
@@ -205,24 +263,48 @@ function renderTable(data) {
   });
 }
 
-function applyFilters() {
-  const cinema = document.getElementById("cinemaFilter").value;
-  const date = document.getElementById("dateFilter").value;
-  const movie = document.getElementById("movieFilter").value.toLowerCase();
+/* CARD VIEW */
+function renderGrid(data) {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
 
-  const filtered = allData
-    .filter(row => {
-      return (
-        (!cinema || row["Cinema Name"] === cinema) &&
-        (!date || row.normalizedDate === date) &&
-        (!movie || row["Movie Name"].toLowerCase().includes(movie))
-      );
-    })
-    .sort((a, b) => parseDateTime(a) - parseDateTime(b));
+  data.forEach(row => {
+    const card = document.createElement("div");
+    card.className = "card";
 
-  renderTable(filtered);
+    card.innerHTML = `
+      <div class="title">${row["Movie Name"]}</div>
+      <div class="meta">
+        🕒 ${row["Time"]} · ${row["Day"]}<br>
+        📅 ${row["Date"]}<br>
+        🎬 ${row["Screen"]}
+      </div>
+      <div class="cinema">${row["Cinema Name"]}</div>
+    `;
+
+    grid.appendChild(card);
+  });
 }
 
+/* CINEMA FILTER */
+function populateCinemaFilter() {
+  const cinemas = [...new Set(allData.map(d => d["Cinema Name"]))];
+  const select = document.getElementById("cinemaFilter");
+
+  cinemas.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    select.appendChild(opt);
+  });
+}
+
+/* TOGGLE LAYOUT */
+function toggleLayout() {
+  document.body.classList.toggle("card-mode");
+}
+
+/* EVENTS */
 document.getElementById("cinemaFilter").addEventListener("change", applyFilters);
 document.getElementById("dateFilter").addEventListener("change", applyFilters);
 document.getElementById("movieFilter").addEventListener("input", applyFilters);
