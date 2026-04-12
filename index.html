@@ -5,91 +5,87 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cinema Listings</title>
 
-<style>
-  body {
-    font-family: Arial;
-    margin: 0;
-    padding: 12px;
-    background: #f5f5f5;
-  }
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      padding: 12px;
+      background: #f5f5f5;
+    }
 
-  h1 {
-    text-align: center;
-    margin-bottom: 10px;
-  }
-
-  .filters {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  select, input {
-    padding: 10px;
-    font-size: 16px; /* prevents iOS zoom */
-    min-width: 160px;
-  }
-
-  /* =========================
-     TABLE WRAPPER (IMPORTANT)
-     ========================= */
-  .table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 700px; /* forces scroll on mobile */
-  }
-
-  th, td {
-    padding: 10px;
-    border: 1px solid #ddd;
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  th {
-    background: #333;
-    color: white;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-
-  /* =========================
-     MOBILE IMPROVEMENTS
-     ========================= */
-  @media (max-width: 600px) {
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
 
     .filters {
-      flex-direction: column;
-      align-items: stretch;
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
 
     select, input {
-      width: 100%;
+      padding: 10px;
+      font-size: 16px; /* prevents iOS zoom */
+      min-width: 160px;
     }
 
-    /* Make table feel better on small screens */
-    th, td {
-      font-size: 14px;
-      padding: 8px;
+    /* =========================
+       TABLE WRAPPER (mobile-friendly)
+       ========================= */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
     table {
-      min-width: 650px; /* still scrollable but tighter */
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 750px; /* forces horizontal scroll on small screens */
     }
-  }
-</style>
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #333;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    /* Slight mobile tuning */
+    @media (max-width: 600px) {
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      select, input {
+        width: 100%;
+      }
+
+      th, td {
+        font-size: 14px;
+        padding: 8px;
+      }
+
+      table {
+        min-width: 650px;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -106,8 +102,22 @@
   <input type="text" id="movieFilter" placeholder="Search movie...">
 </div>
 
-<!-- REPLACED TABLE WITH GRID -->
-<div id="grid" class="grid"></div>
+<!-- TABLE WRAPPER ADDED -->
+<div class="table-wrapper">
+  <table id="table">
+    <thead>
+      <tr>
+        <th>Movie Name</th>
+        <th>Day</th>
+        <th>Time</th>
+        <th>Date</th>
+        <th>Screen</th>
+        <th>Cinema Name</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
@@ -138,7 +148,7 @@ Papa.parse("data.csv", {
       }));
 
     populateCinemaFilter();
-    renderGrid(allData);
+    renderTable(allData);
   }
 });
 
@@ -155,28 +165,24 @@ function populateCinemaFilter() {
   });
 }
 
-// Render cards
-function renderGrid(data) {
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
+// Render table
+function renderTable(data) {
+  const tbody = document.querySelector("#table tbody");
+  tbody.innerHTML = "";
 
   data.forEach(row => {
-    const card = document.createElement("div");
-    card.className = "card";
+    const tr = document.createElement("tr");
 
-    card.innerHTML = `
-      <div class="title">${row["Movie Name"]}</div>
-      
-      <div class="meta">
-        🕒 ${row["Time"]} · ${row["Day"]}<br>
-        📅 ${row["Date"]}<br>
-        🎬 ${row["Screen"]}
-      </div>
-
-      <div class="cinema">${row["Cinema Name"]}</div>
+    tr.innerHTML = `
+      <td>${row["Movie Name"]}</td>
+      <td>${row["Day"]}</td>
+      <td>${row["Time"]}</td>
+      <td>${row["Date"]}</td>
+      <td>${row["Screen"]}</td>
+      <td>${row["Cinema Name"]}</td>
     `;
 
-    grid.appendChild(card);
+    tbody.appendChild(tr);
   });
 }
 
@@ -194,7 +200,7 @@ function applyFilters() {
     );
   });
 
-  renderGrid(filtered);
+  renderTable(filtered);
 }
 
 // Events
