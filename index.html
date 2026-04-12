@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Cinema Listings</title>
 
-  <!-- Simple styling -->
   <style>
     body {
       font-family: Arial;
@@ -37,7 +36,6 @@
     th, td {
       padding: 10px;
       border: 1px solid #ddd;
-      text-align: left;
     }
 
     th {
@@ -63,33 +61,45 @@
 <table id="table">
   <thead>
     <tr>
-      <th>Movie</th>
+      <th>Movie Name</th>
+      <th>Day</th>
+      <th>Time</th>
       <th>Date</th>
-      <th>Cinema</th>
-      <th>Auditorium</th>
+      <th>Screen</th>
+      <th>Cinema Name</th>
     </tr>
   </thead>
   <tbody></tbody>
 </table>
 
-<!-- PapaParse for CSV -->
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <script>
 let allData = [];
 
+// Load CSV
 Papa.parse("data.csv", {
   download: true,
   header: true,
   complete: function(results) {
-    allData = results.data;
+    allData = results.data.map(row => {
+      const dt = new Date(row["DateTime"]);
+
+      return {
+        ...row,
+        parsedDate: dt,
+        dateOnly: dt.toISOString().slice(0, 10) // YYYY-MM-DD for filtering
+      };
+    });
+
     populateCinemaFilter();
     renderTable(allData);
   }
 });
 
+// Populate cinema dropdown
 function populateCinemaFilter() {
-  const cinemas = [...new Set(allData.map(d => d.CinemaName))];
+  const cinemas = [...new Set(allData.map(d => d["Cinema Name"]))];
   const select = document.getElementById("cinemaFilter");
 
   cinemas.forEach(cinema => {
@@ -100,6 +110,7 @@ function populateCinemaFilter() {
   });
 }
 
+// Render table (ONLY required columns)
 function renderTable(data) {
   const tbody = document.querySelector("#table tbody");
   tbody.innerHTML = "";
@@ -107,37 +118,37 @@ function renderTable(data) {
   data.forEach(row => {
     const tr = document.createElement("tr");
 
-    const date = new Date(row.eventDateTime);
-
     tr.innerHTML = `
-      <td>${row.MovieName}</td>
-      <td>${date.toLocaleString()}</td>
-      <td>${row.CinemaName}</td>
-      <td>${row.auditorium}</td>
+      <td>${row["Movie Name"]}</td>
+      <td>${row["Day"]}</td>
+      <td>${row["Time"]}</td>
+      <td>${row["Date"]}</td>
+      <td>${row["Screen"]}</td>
+      <td>${row["Cinema Name"]}</td>
     `;
 
     tbody.appendChild(tr);
   });
 }
 
+// Apply filters
 function applyFilters() {
   const cinema = document.getElementById("cinemaFilter").value;
   const date = document.getElementById("dateFilter").value;
   const movie = document.getElementById("movieFilter").value.toLowerCase();
 
-  let filtered = allData.filter(row => {
-    const rowDate = new Date(row.eventDateTime);
-
+  const filtered = allData.filter(row => {
     return (
-      (!cinema || row.CinemaName === cinema) &&
-      (!date || rowDate.toISOString().slice(0,10) === date) &&
-      (!movie || row.MovieName.toLowerCase().includes(movie))
+      (!cinema || row["Cinema Name"] === cinema) &&
+      (!date || row.dateOnly === date) && // ✅ using DateTime-derived value
+      (!movie || row["Movie Name"].toLowerCase().includes(movie))
     );
   });
 
   renderTable(filtered);
 }
 
+// Event listeners
 document.getElementById("cinemaFilter").addEventListener("change", applyFilters);
 document.getElementById("dateFilter").addEventListener("change", applyFilters);
 document.getElementById("movieFilter").addEventListener("input", applyFilters);
