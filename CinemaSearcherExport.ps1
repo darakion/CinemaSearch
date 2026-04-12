@@ -107,6 +107,74 @@ function Get-CineGrand {
     }
 }
 
+function Get-KinoArena {
+    [CmdletBinding()]
+    param (
+
+        [Parameter(Mandatory, ValueFromPipeline)]
+        $SearchDate
+        
+    )
+    
+    begin {
+                
+        If ( -Not ([System.Management.Automation.PSTypeName]'AngleSharp.Parser.Html.HtmlParser').Type ) {
+        $standardAssemblyFullPath = (Get-ChildItem -Filter '*.dll' -Recurse (Split-Path (Get-Package -Name 'AngleSharp').Source)).FullName | Where-Object {$_ -Like "*standard*"} | Select-Object -Last 1
+
+        Add-Type -Path $standardAssemblyFullPath -ErrorAction 'SilentlyContinue'
+        } # Terminate If - Not Loaded
+
+    }
+    
+    process {
+
+        ####KinoArena#####
+
+        $KinoArenaDate = "$($SearchDate.Date.ToString("dd-MM-yyyy"))-$($SearchDate.date.DayOfWeek.value__)"
+
+        $report = foreach ($Cinema in $ListOfCinemas | where cname -like 'KinoArena*'){
+            $uri = "$($Cinema.LocationURI)/$KinoArenaDateURI"
+
+            $Request = Invoke-WebRequest -Uri $uri -UseBasicParsing
+
+            $Parser = New-Object AngleSharp.Html.Parser.HtmlParser
+            $Parsed = $Parser.ParseDocument($Request.Content)
+
+            $ListOfMovies = $Parsed.All | where classname -like scheduleRow
+
+            $KinoArenaOutput = foreach ($movie in $ListOfMovies){
+
+                $movie.Children[1].Children[1].Children | where ClassName -like 'Row' | foreach {   
+                    $row = $_ 
+                    $row.Children[1].Children[0].Children | foreach {
+                        $itemBooking = $_
+
+                        [pscustomobject]@{
+                            MovieName = $movie.Children[1].Children[0].Children[0].Children.TextContent
+                            eventDateTime = $itemBooking.Children.TextContent | Get-Date
+                            auditorium = ($row.Children[0].Children | foreach {$_.Children.title} | sort) -join '; '
+                            #auditoriumTinyName = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'title'}).Value.split(',')[-1].trim()
+                            CinemaName = $Cinema.DisplayName
+                        }
+                    
+                    }
+                }   
+
+            }
+
+            $KinoArenaOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName
+
+        }
+
+        return $report
+        
+    }
+    
+    end {
+        
+    }
+}
+
 $ListOfCinemas = [pscustomobject]@{
         CName = "CinemaCity-MallOfSofia"; 
         CID = 1261;
@@ -126,20 +194,34 @@ $ListOfCinemas = [pscustomobject]@{
         CID = 0;
         HomeAddress = 'https://cinegrand.bg/';
         LocationURI = 'https://cinegrand.bg/%D0%BF%D0%B0%D1%80%D0%BA-%D1%86%D0%B5%D0%BD%D1%82%D1%8A%D1%80-%D1%81%D0%BE%D1%84%D0%B8%D1%8F/schedule';
-        DisplayName = 'Cine Grand - Park Center'
+        DisplayName = 'CineGrand - Park Center'
     },
-        [pscustomobject]@{
+    [pscustomobject]@{
         CName = "CineGrand-SofiaRingMall"; 
         CID = 0;
         HomeAddress = 'https://cinegrand.bg/';
         LocationURI = 'https://cinegrand.bg/%D1%81%D0%BE%D1%84%D0%B8%D1%8F-%D1%80%D0%B8%D0%BD%D0%B3-%D0%BC%D0%BE%D0%BB/schedule';
         DisplayName = 'CineGrand - Sofia Ring Mall'
     },
-    [pscustomobject]@{CName = "KinoArena"; HomeAddress = 'https://www.kinoarena.com/'}
+
+
+    [pscustomobject]@{
+        CName = "KinoArena-TheMall"; 
+        CID = 0;
+        HomeAddress = 'https://www.kinoarena.com/';
+        LocationURI = 'https://www.kinoarena.com/bg/program/view/kino-arena-the-mall';
+        DisplayName = 'Kino Arena - The Mall'
+    },
+    [pscustomobject]@{
+        CName = "KinoArena-WestMall"; 
+        CID = 0;
+        HomeAddress = 'https://www.kinoarena.com/';
+        LocationURI = 'https://www.kinoarena.com/bg/program/view/arena-mega-mol';
+        DisplayName = 'Kino Arena - West Mall'
+    }
 
 
 
-#$MovieName = 'Проектът „Аве Мария“'
 
 $Today = (Get-Date)
 $ListOfDates = @()
@@ -161,8 +243,10 @@ foreach ($SearchDate in $RangeOfDatesFormatted){
     $finalReport += Get-CinemaCity -SearchDate $SearchDate
 
     ####Cinegrand#####
-
     $finalReport += Get-CineGrand -SearchDate $SearchDate
+
+    ####KinoArena#####
+    $finalReport += Get-KinoArena -SearchDate $SearchDate
 
 }
 
