@@ -38,10 +38,14 @@
       flex-wrap: wrap;
     }
 
-    select, input {
+    select,
+    input[type="text"],
+    input[type="date"],
+    input[type="search"] {
       padding: 10px;
       font-size: 16px;
-      min-width: 160px;
+      width: 180px;
+      box-sizing: border-box;
     }
 
     /* TABLE VIEW */
@@ -122,7 +126,10 @@
         align-items: stretch;
       }
 
-      select, input {
+      select,
+      input[type="text"],
+      input[type="date"],
+      input[type="search"] {
         width: 100%;
       }
 
