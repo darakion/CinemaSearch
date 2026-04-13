@@ -130,10 +130,12 @@ function Get-KinoArena {
 
         ####KinoArena#####
 
-        $KinoArenaDate = "$($SearchDate.Date.ToString("dd-MM-yyyy"))-$($SearchDate.date.DayOfWeek.value__)"
+        $KinoArenaDate = "$($SearchDate.Date.ToString("dd-MM-yyyy"))"
 
-        $report = foreach ($Cinema in $ListOfCinemas | where cname -like 'KinoArena*'){
-            $uri = "$($Cinema.LocationURI)/$KinoArenaDateURI"
+        
+
+        foreach ($Cinema in $ListOfCinemas | where cname -like 'KinoArena*'){
+            $uri = "$($Cinema.LocationURI)/$KinoArenaDate"
 
             $Request = Invoke-WebRequest -Uri $uri -UseBasicParsing
 
@@ -151,7 +153,7 @@ function Get-KinoArena {
 
                         [pscustomobject]@{
                             MovieName = $movie.Children[1].Children[0].Children[0].Children.TextContent
-                            eventDateTime = $itemBooking.Children.TextContent | Get-Date
+                            eventDateTime = Get-Date "$($SearchDate.Date.ToShortDateString()) $($itemBooking.Children.TextContent)"
                             auditorium = ($row.Children[0].Children | foreach {$_.Children.title} | sort) -join '; '
                             #auditoriumTinyName = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'title'}).Value.split(',')[-1].trim()
                             CinemaName = $Cinema.DisplayName
@@ -162,7 +164,7 @@ function Get-KinoArena {
 
             }
 
-            $KinoArenaOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName
+            $report += $KinoArenaOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName
 
         }
 
@@ -247,6 +249,8 @@ foreach ($SearchDate in $RangeOfDatesFormatted){
 
     ####KinoArena#####
     $finalReport += Get-KinoArena -SearchDate $SearchDate
+
+    #Start-Sleep -Seconds 3
 
 }
 
