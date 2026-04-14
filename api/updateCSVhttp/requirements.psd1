@@ -1,0 +1,3 @@
+@{
+    'PSParseHTML' = 'latest'
+}
