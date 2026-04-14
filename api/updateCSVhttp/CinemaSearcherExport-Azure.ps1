@@ -300,8 +300,7 @@ $FilteredMovies = $finalReport | select $outputFormat
 ##Get and update the CSV:
 
 $headers = @{
-    #Authorization = "token $env:GITHUB_TOKEN"
-    Authorization = "token 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"
+    Authorization = "token $env:GITHUB_TOKEN"
     Accept        = "application/vnd.github.v3+json"
 }
 
