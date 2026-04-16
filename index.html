@@ -56,6 +56,19 @@
       margin-bottom: 15px;
       justify-content: center;
       flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 180px;
+    }
+
+    .filter-group label {
+      font-size: 13px;
+      color: #333;
     }
 
     select,
@@ -66,6 +79,12 @@
       font-size: 16px;
       width: 180px;
       box-sizing: border-box;
+    }
+
+    /* Make multi-select taller so options are visible */
+    select[multiple] {
+      min-height: 120px;
+      height: auto;
     }
 
     /* TABLE VIEW */
@@ -146,11 +165,19 @@
         align-items: stretch;
       }
 
+      .filter-group {
+        min-width: auto;
+      }
+
       select,
       input[type="text"],
       input[type="date"],
       input[type="search"] {
         width: 100%;
+      }
+
+      select[multiple] {
+        min-height: 140px;
       }
 
       table {
@@ -179,12 +206,22 @@
 </div>
 
 <div class="filters">
-  <select id="cinemaFilter">
-    <option value="">All Cinemas</option>
-  </select>
+  <div class="filter-group">
+    <label for="cinemaFilter">Cinemas (select one or more)</label>
+    <select id="cinemaFilter" multiple size="4" aria-label="Select cinemas">
+      <!-- options populated by JS -->
+    </select>
+  </div>
 
-  <input type="date" id="dateFilter">
-  <input type="text" id="movieFilter" placeholder="Search movie...">
+  <div class="filter-group">
+    <label for="dateFilter">Select date</label>
+    <input type="date" id="dateFilter" aria-label="Select date">
+  </div>
+
+  <div class="filter-group">
+    <label for="movieFilter">Movie</label>
+    <input type="text" id="movieFilter" placeholder="Type in name..." aria-label="Search movie">
+  </div>
 </div>
 
 <div class="table-wrapper">
@@ -227,7 +264,8 @@ function parseDateTime(row) {
 
 /* RESET FILTERS */
 function resetFilters() {
-  document.getElementById("cinemaFilter").value = "";
+  const cinemaSelect = document.getElementById("cinemaFilter");
+  Array.from(cinemaSelect.options).forEach(o => o.selected = false);
   document.getElementById("dateFilter").value = "";
   document.getElementById("movieFilter").value = "";
 }
@@ -290,7 +328,7 @@ Papa.parse("data.csv", {
       }))
       .sort((a, b) => parseDateTime(a) - parseDateTime(b));
 
-    resetFilters(); // ✅ FIX: clear filters on load
+    resetFilters(); // clear filters on load
     populateCinemaFilter();
     renderAll(allData);
 
@@ -301,14 +339,15 @@ Papa.parse("data.csv", {
 
 /* FILTERS */
 function applyFilters() {
-  const cinema = document.getElementById("cinemaFilter").value;
+  const cinemaSelect = document.getElementById("cinemaFilter");
+  const selectedCinemas = Array.from(cinemaSelect.selectedOptions).map(o => o.value);
   const date = document.getElementById("dateFilter").value;
   const movie = document.getElementById("movieFilter").value.toLowerCase();
 
   const filtered = allData
     .filter(r => {
       return (
-        (!cinema || r["Cinema Name"] === cinema) &&
+        (selectedCinemas.length === 0 || selectedCinemas.includes(r["Cinema Name"])) &&
         (!date || r.normalizedDate === date) &&
         (!movie || r["Movie Name"].toLowerCase().includes(movie))
       );
@@ -370,8 +409,11 @@ function renderGrid(data) {
 
 /* CINEMA FILTER */
 function populateCinemaFilter() {
-  const cinemas = [...new Set(allData.map(d => d["Cinema Name"]))];
+  const cinemas = [...new Set(allData.map(d => d["Cinema Name"]).filter(Boolean))].sort();
   const select = document.getElementById("cinemaFilter");
+
+  // Clear existing options (preserve no-options state)
+  select.innerHTML = "";
 
   cinemas.forEach(c => {
     const opt = document.createElement("option");
