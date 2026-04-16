@@ -7,7 +7,7 @@
 
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       margin: 0;
       padding: 12px;
       background: #f5f5f5;
@@ -23,7 +23,6 @@
       margin: 0 0 10px 0;
     }
 
-    /* Last refresh badge in top-right */
     .last-refresh {
       position: absolute;
       top: 0;
@@ -50,13 +49,14 @@
       cursor: pointer;
     }
 
+    /* Filters: align items at the top (flex-start) */
     .filters {
       display: flex;
       gap: 10px;
       margin-bottom: 15px;
       justify-content: center;
       flex-wrap: wrap;
-      align-items: center;
+      align-items: flex-start;
     }
 
     .filter-group {
@@ -64,11 +64,13 @@
       flex-direction: column;
       gap: 6px;
       min-width: 180px;
+      align-items: flex-start;
     }
 
     .filter-group label {
       font-size: 13px;
       color: #333;
+      font-weight: 700;
     }
 
     select,
@@ -81,10 +83,13 @@
       box-sizing: border-box;
     }
 
-    /* Make multi-select taller so options are visible */
+    /* Multi-select styling and sensible max width */
     select[multiple] {
       min-height: 120px;
       height: auto;
+      width: auto; /* width will be set dynamically by JS */
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     /* TABLE VIEW */
@@ -167,6 +172,7 @@
 
       .filter-group {
         min-width: auto;
+        width: 100%;
       }
 
       select,
@@ -178,6 +184,7 @@
 
       select[multiple] {
         min-height: 140px;
+        width: 100% !important; /* on narrow screens, let it fill */
       }
 
       table {
@@ -206,9 +213,9 @@
 </div>
 
 <div class="filters">
-  <div class="filter-group">
+  <div class="filter-group" id="cinemaGroup">
     <label for="cinemaFilter">Cinemas (select one or more)</label>
-    <select id="cinemaFilter" multiple size="4" aria-label="Select cinemas">
+    <select id="cinemaFilter" multiple size="6" aria-label="Select cinemas">
       <!-- options populated by JS -->
     </select>
   </div>
@@ -220,7 +227,7 @@
 
   <div class="filter-group">
     <label for="movieFilter">Movie</label>
-    <input type="text" id="movieFilter" placeholder="Type in name..." aria-label="Search movie">
+    <input type="text" id="movieFilter" placeholder="Search movie..." aria-label="Search movie">
   </div>
 </div>
 
@@ -274,17 +281,14 @@ function resetFilters() {
 async function updateLastRefresh() {
   const el = document.getElementById("lastRefresh");
   try {
-    // Try HEAD first to avoid downloading the whole file
     let resp = await fetch("data.csv", { method: "HEAD", cache: "no-store" });
     let lm = resp.headers.get("last-modified");
     if (!lm) {
-      // Fallback to GET if HEAD didn't return header
       resp = await fetch("data.csv", { method: "GET", cache: "no-store" });
       lm = resp.headers.get("last-modified");
     }
     if (lm) {
       const d = new Date(lm);
-      // Format using Bulgarian-style dd.MM.yyyy HH:mm:ss
       const formatted = d.toLocaleString("bg-BG", {
         year: "numeric",
         month: "2-digit",
@@ -298,9 +302,8 @@ async function updateLastRefresh() {
       return;
     }
   } catch (e) {
-    // ignore and fallback below
+    // ignore
   }
-  // Final fallback: use current time as "last checked"
   const now = new Date();
   const fallback = now.toLocaleString("bg-BG", {
     year: "numeric",
@@ -328,11 +331,9 @@ Papa.parse("data.csv", {
       }))
       .sort((a, b) => parseDateTime(a) - parseDateTime(b));
 
-    resetFilters(); // clear filters on load
+    resetFilters();
     populateCinemaFilter();
     renderAll(allData);
-
-    // Update last refresh badge after data load
     updateLastRefresh();
   }
 });
@@ -412,7 +413,7 @@ function populateCinemaFilter() {
   const cinemas = [...new Set(allData.map(d => d["Cinema Name"]).filter(Boolean))].sort();
   const select = document.getElementById("cinemaFilter");
 
-  // Clear existing options (preserve no-options state)
+  // Clear existing options
   select.innerHTML = "";
 
   cinemas.forEach(c => {
@@ -421,6 +422,55 @@ function populateCinemaFilter() {
     opt.textContent = c;
     select.appendChild(opt);
   });
+
+  // After populating, adjust width to longest option
+  adjustCinemaSelectWidth();
+}
+
+/* Dynamically size the cinema select to the longest option text */
+function adjustCinemaSelectWidth() {
+  const select = document.getElementById("cinemaFilter");
+  const container = document.querySelector(".filters");
+  if (!select) return;
+
+  // On small screens, let CSS handle full width
+  if (window.matchMedia("(max-width: 600px)").matches) {
+    select.style.width = "100%";
+    return;
+  }
+
+  // Create a measuring span with same font styles
+  const span = document.createElement("span");
+  document.body.appendChild(span);
+  const style = window.getComputedStyle(select);
+  span.style.font = style.font;
+  span.style.fontSize = style.fontSize;
+  span.style.fontFamily = style.fontFamily;
+  span.style.fontWeight = style.fontWeight;
+  span.style.visibility = "hidden";
+  span.style.whiteSpace = "nowrap";
+
+  // Find longest option text
+  let maxWidth = 0;
+  Array.from(select.options).forEach(opt => {
+    span.textContent = opt.textContent;
+    const w = span.getBoundingClientRect().width;
+    if (w > maxWidth) maxWidth = w;
+  });
+
+  document.body.removeChild(span);
+
+  // Add padding + scrollbar allowance
+  const horizontalPadding = 28; // accounts for select padding and dropdown arrow
+  const scrollbarAllowance = 20;
+  const desired = Math.ceil(maxWidth + horizontalPadding + scrollbarAllowance);
+
+  // Cap width to available space in the filters container
+  const containerRect = container.getBoundingClientRect();
+  const maxAllowed = Math.floor(containerRect.width * 0.9); // leave some breathing room
+  const finalWidth = Math.min(desired, maxAllowed);
+
+  select.style.width = finalWidth + "px";
 }
 
 /* TOGGLE LAYOUT */
@@ -432,6 +482,13 @@ function toggleLayout() {
 document.getElementById("cinemaFilter").addEventListener("change", applyFilters);
 document.getElementById("dateFilter").addEventListener("change", applyFilters);
 document.getElementById("movieFilter").addEventListener("input", applyFilters);
+
+// Recalculate cinema width on resize (debounced)
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(adjustCinemaSelectWidth, 120);
+});
 
 // Also update last refresh on page focus (optional)
 window.addEventListener("focus", () => {
