@@ -53,8 +53,8 @@ jobs:
         run: |
           $cache = Join-Path $env:RUNNER_TEMP 'psmodules'
           $env:PSModulePath = "$cache;$env:PSModulePath"
-          Import-Module SomeModule -Force
-          Write-Output "Imported module SomeModule from $cache"
+          Import-Module PSParseHTML -Force
+          Write-Output "Imported module PSParseHTML from $cache"
 
       - name: Run PowerShell script from repo
         shell: pwsh
