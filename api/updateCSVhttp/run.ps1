@@ -251,7 +251,7 @@ $ListOfDates = @()
 $ListOfDates += $Today
 $ListOfDates += 1..7 | foreach {(Get-date).AddDays($_)}
 
-$Thursday = $ListOfDates | where DayOfWeek -like "Thursday"
+$Thursday = $ListOfDates | where DayOfWeek -like "Thursday" | select -Last 1
 
 $RangeOfDates = $ListOfDates | where {$_ -ge $Today -and $_ -le $Thursday}
 
