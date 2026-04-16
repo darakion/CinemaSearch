@@ -77,17 +77,25 @@ function Get-CineGrand {
             $uri = "$($Cinema.LocationURI)-$CineGrandDateURI"
 
             $request = Invoke-WebRequest -Uri $uri -UseBasicParsing
-            $HTML = New-Object -Com "HTMLFile"
-            [string]$htmlBody = $request.Content
-            $HTML.write([ref]$htmlBody)
-            $filter = $HTML.getElementsByClassName("btn btn-sm btn-outline-dark show-time fs no-outline valid ")
 
-            $CineGrandOutput = foreach ($HtmlResult in $filter){
+
+            $Parser = New-Object AngleSharp.Html.Parser.HtmlParser
+            $Parsed = $Parser.ParseDocument($Request.Content)
+
+            $ListOfMovies = $Parsed.All | where classname -like "btn btn-sm btn-outline-dark show-time fs no-outline valid "
+
+            #$HTML = New-Object -Com "HTMLFile"
+            #[string]$htmlBody = $request.Content
+            #$HTML.write([ref]$htmlBody)
+            #$filter = $HTML.getElementsByClassName("btn btn-sm btn-outline-dark show-time fs no-outline valid ")
+
+            $CineGrandOutput = foreach ($HtmlResult in $ListOfMovies){
                 [pscustomobject]@{
-                    MovieName = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'data-movie'}).Value
-                    eventDateTime = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'data-run'}).Value | Get-Date
-                    auditorium = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'title'}).Value.split(',')[-1].trim()
+                    MovieName = ($HtmlResult.Attributes | where {$_.name -like 'data-movie'}).Value
+                    eventDateTime = ($HtmlResult.Attributes | where {$_.name -like 'data-run'}).Value | Get-Date
+                    auditorium = ($HtmlResult.Attributes | where {$_.name -like 'title'}).Value.split(',')[-1].trim()
                     #auditoriumTinyName = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'title'}).Value.split(',')[-1].trim()
+                    #BuyLink = ($HtmlResult.Attributes | where {$_.name -like 'data-buy'}).Value
                     CinemaName = $Cinema.DisplayName
                 }
             }
@@ -118,11 +126,14 @@ function Get-KinoArena {
     
     begin {
                 
+
+        <#
         If ( -Not ([System.Management.Automation.PSTypeName]'AngleSharp.Parser.Html.HtmlParser').Type ) {
         $standardAssemblyFullPath = (Get-ChildItem -Filter '*.dll' -Recurse (Split-Path (Get-Package -Name 'AngleSharp').Source)).FullName | Where-Object {$_ -Like "*standard*"} | Select-Object -Last 1
 
         Add-Type -Path $standardAssemblyFullPath -ErrorAction 'SilentlyContinue'
         } # Terminate If - Not Loaded
+        #>
 
     }
     
@@ -176,6 +187,7 @@ function Get-KinoArena {
         
     }
 }
+
 
 $ListOfCinemas = [pscustomobject]@{
         CName = "CinemaCity-MallOfSofia"; 
