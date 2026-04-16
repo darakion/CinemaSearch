@@ -2,7 +2,7 @@ name: Scheduled Update for Pages
 
 on:
   schedule:
-    - cron: '0 * * * *'   # every hour at minute 0
+    - cron: '0 1 * * *'   # every Day at 1:00
   workflow_dispatch: {}   # manual trigger
 
 permissions:
@@ -24,7 +24,9 @@ jobs:
         with:
           path: ${{ runner.temp }}/psmodules
           key: ps-modules-windows-v1
-          restore-keys: ps-modules-windows-
+          restore-keys: |
+            ps-modules-windows-
+            ps-modules-
 
       - name: Ensure NuGet provider and PSGallery
         shell: pwsh
@@ -39,7 +41,6 @@ jobs:
         run: |
           $cache = Join-Path $env:RUNNER_TEMP 'psmodules'
           New-Item -ItemType Directory -Path $cache -Force | Out-Null
-          # Replace SomeModule with the module you need
           $moduleName = 'PSParseHTML'
           # Save-Module will download module files into the cache folder if not present
           if (-not (Test-Path (Join-Path $cache $moduleName))) {
@@ -48,24 +49,38 @@ jobs:
             Write-Output "Module $moduleName already in cache"
           }
 
-      - name: Add cache folder to PSModulePath and import module
+      - name: Persist PSModulePath for subsequent steps
         shell: pwsh
         run: |
           $cache = Join-Path $env:RUNNER_TEMP 'psmodules'
-          $env:PSModulePath = "$cache;$env:PSModulePath"
-          Import-Module PSParseHTML -Force
-          Write-Output "Imported module PSParseHTML from $cache"
+          $newPath = "$cache;$env:PSModulePath"
+          # Persist PSModulePath for later steps
+          Add-Content -Path $env:GITHUB_ENV -Value "PSModulePath=$newPath"
+          Write-Output "Persisted PSModulePath: $newPath"
+
+      - name: Verify module is available
+        shell: pwsh
+        run: |
+          Write-Output "PSModulePath: $env:PSModulePath"
+          $cache = Join-Path $env:RUNNER_TEMP 'psmodules'
+          Write-Output "Cache folder contents (top level):"
+          Get-ChildItem -Path $cache -Force | ForEach-Object { Write-Output $_.FullName }
+          Write-Output "Modules found by PowerShell:"
+          Get-Module -ListAvailable PSParseHTML | Format-List -Property Name,Version,Path
 
       - name: Run PowerShell script from repo
         shell: pwsh
         run: pwsh -File ./CinemaSearcherExportTrigger.ps1
 
       - name: Show git status
+        shell: pwsh
         run: git status --porcelain
 
       - name: Commit and push if changed
+        shell: pwsh
         run: |
-          if ((git status --porcelain) -ne "") {
+          $status = git status --porcelain
+          if ($status) {
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add docs/data.json
@@ -75,4 +90,3 @@ jobs:
           } else {
             Write-Output "No changes to commit"
           }
-
