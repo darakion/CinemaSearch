@@ -290,5 +290,5 @@ $outputFormat = @(
 $FilteredMovies = $finalReport | select $outputFormat
 
 
-#$FilteredMovies | Export-Csv '.\data.csv' -NoTypeInformation -Force
+$FilteredMovies | Export-Csv '.\data.csv' -NoTypeInformation -Force
 #$FilteredMovies | Out-GridView
