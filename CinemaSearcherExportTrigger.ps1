@@ -79,10 +79,15 @@ function Get-CineGrand {
             $request = Invoke-WebRequest -Uri $uri -UseBasicParsing
 
 
-            $Parser = New-Object AngleSharp.Html.Parser.HtmlParser
-            $Parsed = $Parser.ParseDocument($Request.Content)
+            $Parsed = $request.Content | ConvertFrom-HTML
 
-            $ListOfMovies = $Parsed.All | where classname -like "btn btn-sm btn-outline-dark show-time fs no-outline valid "
+                #$Parser = New-Object AngleSharp.Html.Parser.HtmlParser
+                #$Parsed = $Parser.ParseDocument($Request.Content)
+
+                #$ListOfMovies = $Parsed.All | where classname -like "btn btn-sm btn-outline-dark show-time fs no-outline valid "
+
+            $ListOfMovies = $Parsed.childnodes[2].childnodes[3].childnodes[11].childnodes[1].childnodes[5].childnodes[1].childnodes | where name -like 'li'
+
 
             #$HTML = New-Object -Com "HTMLFile"
             #[string]$htmlBody = $request.Content
@@ -91,9 +96,9 @@ function Get-CineGrand {
 
             $CineGrandOutput = foreach ($HtmlResult in $ListOfMovies){
                 [pscustomobject]@{
-                    MovieName = ($HtmlResult.Attributes | where {$_.name -like 'data-movie'}).Value
-                    eventDateTime = ($HtmlResult.Attributes | where {$_.name -like 'data-run'}).Value | Get-Date
-                    auditorium = ($HtmlResult.Attributes | where {$_.name -like 'title'}).Value.split(',')[-1].trim()
+                    MovieName = ($HtmlResult.ChildNodes[3].childnodes[4].ChildNodes[1].Attributes | where {$_.name -like 'data-movie'}).Value
+                    eventDateTime = ($HtmlResult.ChildNodes[3].childnodes[4].ChildNodes[1].Attributes | where {$_.name -like 'data-run'}).Value | Get-Date
+                    auditorium = ($HtmlResult.ChildNodes[3].childnodes[4].ChildNodes[1].Attributes | where {$_.name -like 'title'}).Value.split(',')[-1].trim()
                     #auditoriumTinyName = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'title'}).Value.split(',')[-1].trim()
                     #BuyLink = ($HtmlResult.Attributes | where {$_.name -like 'data-buy'}).Value
                     CinemaName = $Cinema.DisplayName
@@ -125,15 +130,7 @@ function Get-KinoArena {
     )
     
     begin {
-                
-
-        <#
-        If ( -Not ([System.Management.Automation.PSTypeName]'AngleSharp.Parser.Html.HtmlParser').Type ) {
-        $standardAssemblyFullPath = (Get-ChildItem -Filter '*.dll' -Recurse (Split-Path (Get-Package -Name 'AngleSharp').Source)).FullName | Where-Object {$_ -Like "*standard*"} | Select-Object -Last 1
-
-        Add-Type -Path $standardAssemblyFullPath -ErrorAction 'SilentlyContinue'
-        } # Terminate If - Not Loaded
-        #>
+     
 
     }
     
@@ -150,22 +147,28 @@ function Get-KinoArena {
 
             $Request = Invoke-WebRequest -Uri $uri -UseBasicParsing
 
-            $Parser = New-Object AngleSharp.Html.Parser.HtmlParser
-            $Parsed = $Parser.ParseDocument($Request.Content)
+                #$Parser = New-Object AngleSharp.Html.Parser.HtmlParser
+                #$Parsed = $Parser.ParseDocument($Request.Content)
 
-            $ListOfMovies = $Parsed.All | where classname -like scheduleRow
+
+            $Parsed = $Request.Content | ConvertFrom-HTML
+
+
+                #$ListOfMovies = $Parsed.All | where classname -like scheduleRow
+
+            $ListOfMovies = $Parsed.ChildNodes[2].ChildNodes[3].ChildNodes[13].ChildNodes[5].ChildNodes[3].ChildNodes[1].ChildNodes[10].ChildNodes | where name -like "div"
 
             $KinoArenaOutput = foreach ($movie in $ListOfMovies){
 
-                $movie.Children[1].Children[1].Children | where ClassName -like 'Row' | foreach {   
+                $movie.ChildNodes[3].ChildNodes[3].ChildNodes | where {$_.attributes.Value -like 'Row'} | foreach {   
                     $row = $_ 
-                    $row.Children[1].Children[0].Children | foreach {
+                    $row.ChildNodes[3].ChildNodes[1].ChildNodes | where name -like 'a' | foreach {
                         $itemBooking = $_
 
                         [pscustomobject]@{
-                            MovieName = $movie.Children[1].Children[0].Children[0].Children.TextContent
-                            eventDateTime = Get-Date "$($SearchDate.Date.ToShortDateString()) $($itemBooking.Children.TextContent)"
-                            auditorium = ($row.Children[0].Children | foreach {$_.Children.title} | sort) -join '; '
+                            MovieName = $movie.ChildNodes[3].ChildNodes[1].ChildNodes[1].ChildNodes[0].InnerText
+                            eventDateTime = Get-Date "$($SearchDate.Date.ToShortDateString()) $($itemBooking.ChildNodes[1].InnerText)"
+                            auditorium = ($row.ChildNodes[1].ChildNodes | foreach {$_.Attributes[1].value} | sort) -join '; '
                             #auditoriumTinyName = ($HtmlResult.ie8_attributes | where {$_.nodename -like 'title'}).Value.split(',')[-1].trim()
                             CinemaName = $Cinema.DisplayName
                         }
