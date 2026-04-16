@@ -148,7 +148,8 @@ function Get-KinoArena {
 
         
 
-        foreach ($Cinema in $ListOfCinemas | where cname -like 'KinoArena*'){
+        $report += foreach ($Cinema in $ListOfCinemas | where cname -like 'KinoArena*'){
+            
             $uri = "$($Cinema.LocationURI)/$KinoArenaDate"
 
             $Request = Invoke-WebRequest -Uri $uri -UseBasicParsing
@@ -184,7 +185,7 @@ function Get-KinoArena {
 
             }
 
-            $report += $KinoArenaOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName
+            $KinoArenaOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName
 
         }
 
