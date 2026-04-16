@@ -1,4 +1,10 @@
 
+Write-Host $(Get-Module | ft -AutoSize | Out-String)
+Import-Module PSParseHTML
+
+
+
+
 ## Functions:
 function Get-CinemaCity {
     [CmdletBinding()]
