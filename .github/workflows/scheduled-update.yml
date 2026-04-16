@@ -19,6 +19,43 @@ jobs:
           persist-credentials: true
           fetch-depth: 0
 
+      - name: Restore cached PowerShell modules
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/psmodules
+          key: ps-modules-windows-v1
+          restore-keys: ps-modules-windows-
+
+      - name: Ensure NuGet provider and PSGallery
+        shell: pwsh
+        run: |
+          if (-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
+            Register-PSRepository -Default
+          }
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+
+      - name: Save required module to cache folder
+        shell: pwsh
+        run: |
+          $cache = Join-Path $env:RUNNER_TEMP 'psmodules'
+          New-Item -ItemType Directory -Path $cache -Force | Out-Null
+          # Replace SomeModule with the module you need
+          $moduleName = 'PSParseHTML'
+          # Save-Module will download module files into the cache folder if not present
+          if (-not (Test-Path (Join-Path $cache $moduleName))) {
+            Save-Module -Name $moduleName -Path $cache -Force -Repository PSGallery
+          } else {
+            Write-Output "Module $moduleName already in cache"
+          }
+
+      - name: Add cache folder to PSModulePath and import module
+        shell: pwsh
+        run: |
+          $cache = Join-Path $env:RUNNER_TEMP 'psmodules'
+          $env:PSModulePath = "$cache;$env:PSModulePath"
+          Import-Module SomeModule -Force
+          Write-Output "Imported module SomeModule from $cache"
+
       - name: Run PowerShell script from repo
         shell: pwsh
         run: pwsh -File ./CinemaSearcherExportTrigger.ps1
