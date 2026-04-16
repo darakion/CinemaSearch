@@ -1,0 +1,41 @@
+name: Scheduled Update for Pages
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour at minute 0
+  workflow_dispatch: {}   # manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Run PowerShell script from repo
+        shell: pwsh
+        run: pwsh -File ./CinemaSearcherExportTrigger.ps1
+
+      - name: Show git status
+        run: git status --porcelain
+
+      - name: Commit and push if changed
+        run: |
+          if ((git status --porcelain) -ne "") {
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add docs/data.json
+            $ts = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            git commit -m "Automated update: data.json at $ts"
+            git push
+          } else {
+            Write-Output "No changes to commit"
+          }
+
