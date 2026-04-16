@@ -13,9 +13,29 @@
       background: #f5f5f5;
     }
 
+    .header-row {
+      position: relative;
+      margin-bottom: 6px;
+    }
+
     h1 {
       text-align: center;
-      margin-bottom: 10px;
+      margin: 0 0 10px 0;
+    }
+
+    /* Last refresh badge in top-right */
+    .last-refresh {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e0e0e0;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #333;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+      white-space: nowrap;
     }
 
     .top-bar {
@@ -136,13 +156,23 @@
       table {
         min-width: 650px;
       }
+
+      .last-refresh {
+        position: static;
+        display: inline-block;
+        margin-top: 8px;
+        text-align: center;
+      }
     }
   </style>
 </head>
 
 <body>
 
-<h1>🎬 Cinema Listings</h1>
+<div class="header-row">
+  <h1>🎬 Cinema Listings</h1>
+  <div id="lastRefresh" class="last-refresh">Last Refresh Date: —</div>
+</div>
 
 <div class="top-bar">
   <button onclick="toggleLayout()">Switch Layout</button>
@@ -202,6 +232,50 @@ function resetFilters() {
   document.getElementById("movieFilter").value = "";
 }
 
+/* Update Last Refresh badge */
+async function updateLastRefresh() {
+  const el = document.getElementById("lastRefresh");
+  try {
+    // Try HEAD first to avoid downloading the whole file
+    let resp = await fetch("data.csv", { method: "HEAD", cache: "no-store" });
+    let lm = resp.headers.get("last-modified");
+    if (!lm) {
+      // Fallback to GET if HEAD didn't return header
+      resp = await fetch("data.csv", { method: "GET", cache: "no-store" });
+      lm = resp.headers.get("last-modified");
+    }
+    if (lm) {
+      const d = new Date(lm);
+      // Format using Bulgarian-style dd.MM.yyyy HH:mm:ss
+      const formatted = d.toLocaleString("bg-BG", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).replace(",", "");
+      el.textContent = `Last Refresh Date: ${formatted}`;
+      return;
+    }
+  } catch (e) {
+    // ignore and fallback below
+  }
+  // Final fallback: use current time as "last checked"
+  const now = new Date();
+  const fallback = now.toLocaleString("bg-BG", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).replace(",", "");
+  el.textContent = `Last Refresh Date: ${fallback} (checked)`;
+}
+
 /* LOAD DATA */
 Papa.parse("data.csv", {
   download: true,
@@ -219,6 +293,9 @@ Papa.parse("data.csv", {
     resetFilters(); // ✅ FIX: clear filters on load
     populateCinemaFilter();
     renderAll(allData);
+
+    // Update last refresh badge after data load
+    updateLastRefresh();
   }
 });
 
@@ -314,6 +391,10 @@ document.getElementById("cinemaFilter").addEventListener("change", applyFilters)
 document.getElementById("dateFilter").addEventListener("change", applyFilters);
 document.getElementById("movieFilter").addEventListener("input", applyFilters);
 
+// Also update last refresh on page focus (optional)
+window.addEventListener("focus", () => {
+  updateLastRefresh();
+});
 </script>
 
 </body>

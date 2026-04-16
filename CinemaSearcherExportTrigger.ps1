@@ -3,8 +3,6 @@ Write-Host $(Get-Module | ft -AutoSize | Out-String)
 Import-Module PSParseHTML
 
 
-
-
 ## Functions:
 function Get-CinemaCity {
     [CmdletBinding()]
@@ -149,7 +147,7 @@ function Get-KinoArena {
         
 
         $report += foreach ($Cinema in $ListOfCinemas | where cname -like 'KinoArena*'){
-            
+
             $uri = "$($Cinema.LocationURI)/$KinoArenaDate"
 
             $Request = Invoke-WebRequest -Uri $uri -UseBasicParsing
@@ -280,9 +278,9 @@ foreach ($SearchDate in $RangeOfDatesFormatted){
 $outputFormat = @(
     @{n='Movie Name'; e={$_.moviename}},
     @{n='DateTime'; e={$_.eventDateTime.ToString("yyyy-MM-ddThh:mm:ss")}},
-    @{n='Date'; e={$_.eventDateTime.ToShortDateString()}},
+    @{n='Date'; e={$_.eventDateTime.ToString("d.M.yyyy")}},
     @{n='Day'; e={$_.eventDateTime.DayOfWeek}},
-    @{n='Time'; e={$_.eventDateTime.ToShortTimeString()}},
+    @{n='Time'; e={$_.eventDateTime.ToString("HH:mm")}},
     @{n='Screen'; e={if($_.auditoriumTinyName){$_.auditoriumTinyName} else{$_.auditorium}}},
     @{n='Cinema Name'; e={$_.CinemaName}}
 )
@@ -292,5 +290,5 @@ $outputFormat = @(
 $FilteredMovies = $finalReport | select $outputFormat
 
 
-$FilteredMovies | Export-Csv '.\data.csv' -NoTypeInformation -Force
+#$FilteredMovies | Export-Csv '.\data.csv' -NoTypeInformation -Force
 #$FilteredMovies | Out-GridView
