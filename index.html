@@ -239,10 +239,10 @@
       top: 0;
     }
 
-    /* New: cinema list layout (two columns) */
+    /* Cinema list layout: single column (icon + name per row) */
     .cinema-list {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 6px 12px;
       align-items: start;
       grid-auto-rows: auto;
@@ -305,9 +305,10 @@
       color: #444;
     }
 
+    /* movie-cinemas: single column so each cinema occupies its own row */
     .movie-card .movie-cinemas {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 6px 12px;
       align-items: start;
       grid-auto-rows: auto;
@@ -364,7 +365,7 @@
         align-items: flex-start;
       }
 
-      /* On very narrow screens, make cinema-list single column for readability */
+      /* keep cinema lists single column on mobile as well */
       .cinema-list {
         grid-template-columns: 1fr;
       }
@@ -811,7 +812,7 @@ function renderMoviesTable(data) {
     // sort alphabetically, case-insensitive (use Bulgarian locale for better results)
     cinemas.sort((a, b) => a.localeCompare(b, 'bg', { sensitivity: 'base' }));
 
-    // Build structured cinema list (two columns)
+    // Build structured cinema list (single column: icon + name per row)
     const list = document.createElement("div");
     list.className = "cinema-list";
 
@@ -930,7 +931,6 @@ function renderMoviesGrid(data) {
       cinemasWrap.appendChild(item);
     });
 
-    // Note: removed the textual "cinemas.join" string to avoid duplicate listing
     card.appendChild(title);
     card.appendChild(datesEl);
     card.appendChild(cinemasWrap);
