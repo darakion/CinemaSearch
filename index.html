@@ -793,7 +793,8 @@ function renderMoviesTable(data) {
     datesTd.textContent = dates.join("; ");
 
     const cinemasTd = document.createElement("td");
-    const cinemas = (row["Available Cinemas"] || "").split(";").map(s => s.trim()).filter(Boolean);
+    //const cinemas = (row["Available Cinemas"] || "").split(";").map(s => s.trim()).filter(Boolean);
+    cinemas.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
     // Build structured cinema list (two columns)
     const list = document.createElement("div");
@@ -865,7 +866,8 @@ function renderMoviesGrid(data) {
     datesEl.className = "movie-dates";
     datesEl.textContent = dates.join("; ");
 
-    const cinemas = (row["Available Cinemas"] || "").split(";").map(s => s.trim()).filter(Boolean);
+    //const cinemas = (row["Available Cinemas"] || "").split(";").map(s => s.trim()).filter(Boolean);
+    cinemas.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     const cinemasWrap = document.createElement("div");
     cinemasWrap.className = "movie-cinemas";
 
