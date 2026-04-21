@@ -166,7 +166,7 @@
       color: #fff !important;
     }
 
-    /* CARD VIEW */
+    /* CARD VIEW (showtimes) */
     .grid {
       display: none;
       grid-template-columns: 1fr;
@@ -257,14 +257,48 @@
       object-fit: contain;
     }
 
-    /* TOGGLE MODE */
-    body.card-mode .table-wrapper {
+    /* MOVIES GRID (summary cards) */
+    .movies-grid {
       display: none;
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
     }
 
-    body.card-mode .grid {
-      display: grid;
+    .movie-card {
+      background: white;
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid #e6e6e6;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
+
+    .movie-card .movie-title {
+      font-weight: 700;
+    }
+
+    .movie-card .movie-dates {
+      font-size: 13px;
+      color: #444;
+    }
+
+    .movie-card .movie-cinemas {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* TOGGLE MODE: when body.card-mode show card views for both pages */
+    body.card-mode .table-wrapper { display: none; }
+    body.card-mode .grid { display: grid; }
+
+    body.card-mode .movies-table-wrapper { display: none; }
+    body.card-mode .movies-grid { display: grid; }
 
     /* MOBILE */
     @media (max-width: 600px) {
@@ -318,7 +352,7 @@
 
 <div class="top-bar">
   <button id="pageToggleBtn" class="page-toggle" onclick="togglePage()">Switch to Movies Summary</button>
-  <button onclick="toggleLayout()">Switch Layout</button>
+  <button id="layoutToggleBtn" onclick="toggleLayout()">Switch Layout</button>
 </div>
 
 <!-- MAIN LISTING PAGE -->
@@ -365,7 +399,7 @@
 <div id="moviesPage" class="movies-page">
   <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
     <div style="font-weight:700;">Movies Summary</div>
-    <!--<div style="font-size:13px; color:#555;">(data from <code>data2.csv</code>)</div>     #Commented out line that is not needed. DP. 2026-04-21 -->
+    <!--<div style="font-size:13px; color:#555;">(data from <code>data2.csv</code>)</div> -->
   </div>
 
   <div class="movies-table-wrapper">
@@ -380,13 +414,15 @@
       <tbody></tbody>
     </table>
   </div>
+
+  <div id="moviesGrid" class="movies-grid" aria-hidden="true"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <script>
 /* ---------- Configuration: mapping CinemaDisplay -> color & icon ---------- */
-/* KinoArena color updated to deep red as requested (#8A0A0F) */
+/* KinoArena color set to deep red (#8A0A0F) */
 const CINEMA_MAP = {
   'kinoarena': {
     color: '#8A0A0F',
@@ -408,7 +444,6 @@ function normalizeKey(s) {
   return String(s).trim().toLowerCase();
 }
 
-/* Try to detect cinema key from full cinema name (used for data2.csv) */
 function detectCinemaKeyFromName(name) {
   if (!name) return '';
   const n = name.toLowerCase();
@@ -418,7 +453,6 @@ function detectCinemaKeyFromName(name) {
   return '';
 }
 
-/* Decide whether to use dark text on top of the background color */
 function isColorLight(hex) {
   if (!hex) return false;
   const c = hex.replace('#','');
@@ -430,7 +464,7 @@ function isColorLight(hex) {
   return lum > 180;
 }
 
-/* ---------- Existing code (kept and integrated) ---------- */
+/* ---------- Data & State ---------- */
 let allData = [];      // data from data.csv (showtimes)
 let moviesData = [];   // data from data2.csv (movies summary)
 let currentPage = 'main'; // 'main' or 'movies'
@@ -529,16 +563,11 @@ Papa.parse("data2.csv", {
   complete: function(results) {
     moviesData = results.data
       .filter(r => r["Movie Name"])
-      .map(r => ({
-        ...r
-      }))
-      .sort((a, b) => {
-        const A = (a["Movie Name"] || "").toLowerCase();
-        const B = (b["Movie Name"] || "").toLowerCase();
-        return A.localeCompare(B);
-      });
+      .map(r => ({ ...r }))
+      .sort((a, b) => (a["Movie Name"] || "").localeCompare(b["Movie Name"] || "", undefined, { sensitivity: 'base' }));
 
     renderMoviesTable(moviesData);
+    renderMoviesGrid(moviesData); // prepare grid view as well
   }
 });
 
@@ -562,7 +591,7 @@ function applyFilters() {
   renderAll(filtered);
 }
 
-/* RENDER BOTH VIEWS */
+/* RENDER BOTH VIEWS (showtimes) */
 function renderAll(data) {
   renderTable(data);
   renderGrid(data);
@@ -608,7 +637,6 @@ function renderTable(data) {
       img.loading = 'lazy';
       iconWrap.appendChild(img);
     } else {
-      // placeholder (empty black square)
       const placeholder = document.createElement("span");
       placeholder.style.display = 'inline-block';
       placeholder.style.width = '22px';
@@ -736,14 +764,12 @@ function renderMoviesTable(data) {
     nameTd.textContent = row["Movie Name"] || '';
 
     const datesTd = document.createElement("td");
-    // keep the semicolon-separated dates as-is but trim spaces
     const dates = (row["Available Dates"] || "").split(";").map(s => s.trim()).filter(Boolean);
     datesTd.textContent = dates.join("; ");
 
     const cinemasTd = document.createElement("td");
     const cinemas = (row["Available Cinemas"] || "").split(";").map(s => s.trim()).filter(Boolean);
 
-    // For each cinema, show a small black-square icon (if we can detect mapping) and the name
     const iconsWrap = document.createElement("div");
     iconsWrap.className = "cinema-icons-inline";
 
@@ -760,7 +786,6 @@ function renderMoviesTable(data) {
         img.loading = 'lazy';
         mini.appendChild(img);
       } else {
-        // small placeholder dot
         const ph = document.createElement("span");
         ph.style.display = 'inline-block';
         ph.style.width = '12px';
@@ -769,12 +794,10 @@ function renderMoviesTable(data) {
         ph.style.borderRadius = '2px';
         mini.appendChild(ph);
       }
-      // tooltip with full cinema name
       mini.title = c;
       iconsWrap.appendChild(mini);
     });
 
-    // Also append textual list of cinemas (for clarity)
     const textList = document.createElement("div");
     textList.style.marginTop = "6px";
     textList.style.fontSize = "13px";
@@ -789,6 +812,69 @@ function renderMoviesTable(data) {
     tr.appendChild(cinemasTd);
 
     tbody.appendChild(tr);
+  });
+}
+
+/* MOVIES GRID (summary cards) */
+function renderMoviesGrid(data) {
+  const grid = document.getElementById("moviesGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  data.forEach(row => {
+    const card = document.createElement("div");
+    card.className = "movie-card";
+
+    const title = document.createElement("div");
+    title.className = "movie-title";
+    title.textContent = row["Movie Name"] || '';
+
+    const dates = (row["Available Dates"] || "").split(";").map(s => s.trim()).filter(Boolean);
+    const datesEl = document.createElement("div");
+    datesEl.className = "movie-dates";
+    datesEl.textContent = dates.join("; ");
+
+    const cinemas = (row["Available Cinemas"] || "").split(";").map(s => s.trim()).filter(Boolean);
+    const cinemasWrap = document.createElement("div");
+    cinemasWrap.className = "movie-cinemas";
+
+    cinemas.forEach(c => {
+      const key = detectCinemaKeyFromName(c);
+      const mapping = CINEMA_MAP[key];
+
+      const mini = document.createElement("span");
+      mini.className = "cinema-mini";
+      if (mapping && mapping.icon) {
+        const img = document.createElement("img");
+        img.src = mapping.icon;
+        img.alt = c + " icon";
+        img.loading = 'lazy';
+        mini.appendChild(img);
+      } else {
+        const ph = document.createElement("span");
+        ph.style.display = 'inline-block';
+        ph.style.width = '12px';
+        ph.style.height = '12px';
+        ph.style.background = '#444';
+        ph.style.borderRadius = '2px';
+        mini.appendChild(ph);
+      }
+      mini.title = c;
+      cinemasWrap.appendChild(mini);
+    });
+
+    // textual list below icons for clarity
+    const textList = document.createElement("div");
+    textList.style.fontSize = "13px";
+    textList.style.opacity = "0.9";
+    textList.textContent = cinemas.join("; ");
+
+    card.appendChild(title);
+    card.appendChild(datesEl);
+    card.appendChild(cinemasWrap);
+    card.appendChild(textList);
+
+    grid.appendChild(card);
   });
 }
 
@@ -869,8 +955,9 @@ function togglePage() {
     movies.style.display = 'block';
     btn.textContent = 'Switch to Showtimes';
     currentPage = 'movies';
-    // update last refresh for data2.csv
     updateLastRefresh("data2.csv");
+    // ensure movies view respects current layout mode
+    syncMoviesLayout();
   } else {
     // switch to main
     movies.style.display = 'none';
@@ -878,12 +965,46 @@ function togglePage() {
     btn.textContent = 'Switch to Movies Summary';
     currentPage = 'main';
     updateLastRefresh("data.csv");
+    // ensure showtimes view respects current layout mode
+    syncShowtimesLayout();
   }
 }
 
-/* TOGGLE LAYOUT */
+/* Ensure movies page layout matches body.card-mode state */
+function syncMoviesLayout() {
+  const isCardMode = document.body.classList.contains('card-mode');
+  const moviesTableWrapper = document.querySelector('.movies-table-wrapper');
+  const moviesGrid = document.getElementById('moviesGrid');
+
+  if (isCardMode) {
+    // show grid (CSS handles visibility), but ensure grid is populated
+    renderMoviesGrid(moviesData);
+    moviesGrid.setAttribute('aria-hidden', 'false');
+  } else {
+    moviesGrid.setAttribute('aria-hidden', 'true');
+  }
+}
+
+/* Ensure showtimes page layout matches body.card-mode state */
+function syncShowtimesLayout() {
+  const isCardMode = document.body.classList.contains('card-mode');
+  const grid = document.getElementById('grid');
+  if (isCardMode) {
+    renderGrid(allData);
+  }
+}
+
+/* TOGGLE LAYOUT (works for both pages) */
 function toggleLayout() {
   document.body.classList.toggle("card-mode");
+
+  // If currently on movies page, ensure movies grid/table are in sync
+  if (currentPage === 'movies') {
+    syncMoviesLayout();
+  } else {
+    // on main page, re-render grid if switching to card-mode
+    syncShowtimesLayout();
+  }
 }
 
 /* EVENTS */
@@ -902,6 +1023,12 @@ window.addEventListener("resize", () => {
 window.addEventListener("focus", () => {
   if (currentPage === 'main') updateLastRefresh("data.csv");
   else updateLastRefresh("data2.csv");
+});
+
+// Initialize: show main page
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('mainPage').style.display = 'block';
+  document.getElementById('moviesPage').style.display = 'none';
 });
 </script>
 
