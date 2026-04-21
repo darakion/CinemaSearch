@@ -234,11 +234,21 @@
       top: 0;
     }
 
-    .cinema-icons-inline {
-      display: inline-flex;
-      gap: 6px;
+    /* New: cinema list layout (two columns) */
+    .cinema-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 12px;
+      align-items: start;
+    }
+
+    .cinema-item {
+      display: flex;
+      gap: 8px;
       align-items: center;
-      flex-wrap: wrap;
+      white-space: normal;
+      font-size: 13px;
+      color: inherit;
     }
 
     .cinema-mini {
@@ -249,12 +259,14 @@
       height: 26px;
       background: #000;
       border-radius: 5px;
+      flex-shrink: 0;
     }
 
     .cinema-mini img {
       width: 16px;
       height: 16px;
       object-fit: contain;
+      display: block;
     }
 
     /* MOVIES GRID (summary cards) */
@@ -287,10 +299,14 @@
     }
 
     .movie-card .movie-cinemas {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 12px;
+      align-items: start;
+    }
+
+    .movie-card .movie-cinemas .cinema-item {
+      font-size: 13px;
     }
 
     /* TOGGLE MODE: when body.card-mode show card views for both pages */
@@ -338,6 +354,15 @@
       .card {
         flex-direction: column;
         align-items: flex-start;
+      }
+
+      /* On very narrow screens, make cinema-list single column for readability */
+      .cinema-list {
+        grid-template-columns: 1fr;
+      }
+
+      .movie-card .movie-cinemas {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -399,7 +424,7 @@
 <div id="moviesPage" class="movies-page">
   <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
     <div style="font-weight:700;">Movies Summary</div>
-    <!--<div style="font-size:13px; color:#555;">(data from <code>data2.csv</code>)</div> -->
+    <!-- <div style="font-size:13px; color:#555;">(data from <code>data2.csv</code>)</div> -->
   </div>
 
   <div class="movies-table-wrapper">
@@ -770,10 +795,14 @@ function renderMoviesTable(data) {
     const cinemasTd = document.createElement("td");
     const cinemas = (row["Available Cinemas"] || "").split(";").map(s => s.trim()).filter(Boolean);
 
-    const iconsWrap = document.createElement("div");
-    iconsWrap.className = "cinema-icons-inline";
+    // Build structured cinema list (two columns)
+    const list = document.createElement("div");
+    list.className = "cinema-list";
 
     cinemas.forEach(c => {
+      const item = document.createElement("div");
+      item.className = "cinema-item";
+
       const key = detectCinemaKeyFromName(c);
       const mapping = CINEMA_MAP[key];
 
@@ -794,18 +823,20 @@ function renderMoviesTable(data) {
         ph.style.borderRadius = '2px';
         mini.appendChild(ph);
       }
-      mini.title = c;
-      iconsWrap.appendChild(mini);
+
+      const text = document.createElement("div");
+      text.textContent = c;
+      text.style.fontSize = "13px";
+      text.style.lineHeight = "1.1";
+
+      item.appendChild(mini);
+      item.appendChild(text);
+      item.title = c;
+
+      list.appendChild(item);
     });
 
-    const textList = document.createElement("div");
-    textList.style.marginTop = "6px";
-    textList.style.fontSize = "13px";
-    textList.style.opacity = "0.9";
-    textList.textContent = cinemas.join("; ");
-
-    cinemasTd.appendChild(iconsWrap);
-    cinemasTd.appendChild(textList);
+    cinemasTd.appendChild(list);
 
     tr.appendChild(nameTd);
     tr.appendChild(datesTd);
@@ -839,6 +870,9 @@ function renderMoviesGrid(data) {
     cinemasWrap.className = "movie-cinemas";
 
     cinemas.forEach(c => {
+      const item = document.createElement("div");
+      item.className = "cinema-item";
+
       const key = detectCinemaKeyFromName(c);
       const mapping = CINEMA_MAP[key];
 
@@ -859,11 +893,20 @@ function renderMoviesGrid(data) {
         ph.style.borderRadius = '2px';
         mini.appendChild(ph);
       }
-      mini.title = c;
-      cinemasWrap.appendChild(mini);
+
+      const text = document.createElement("div");
+      text.textContent = c;
+      text.style.fontSize = "13px";
+      text.style.lineHeight = "1.1";
+
+      item.appendChild(mini);
+      item.appendChild(text);
+      item.title = c;
+
+      cinemasWrap.appendChild(item);
     });
 
-    // textual list below icons for clarity
+    // textual list below icons for clarity (optional)
     const textList = document.createElement("div");
     textList.style.fontSize = "13px";
     textList.style.opacity = "0.9";
@@ -973,11 +1016,9 @@ function togglePage() {
 /* Ensure movies page layout matches body.card-mode state */
 function syncMoviesLayout() {
   const isCardMode = document.body.classList.contains('card-mode');
-  const moviesTableWrapper = document.querySelector('.movies-table-wrapper');
   const moviesGrid = document.getElementById('moviesGrid');
 
   if (isCardMode) {
-    // show grid (CSS handles visibility), but ensure grid is populated
     renderMoviesGrid(moviesData);
     moviesGrid.setAttribute('aria-hidden', 'false');
   } else {
