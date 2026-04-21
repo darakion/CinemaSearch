@@ -257,7 +257,7 @@ $RangeOfDates = $ListOfDates | where {$_ -ge $Today -and $_ -le $Thursday}
 $index1 = 0
 $RangeOfDatesFormatted = $RangeOfDates | foreach {$index1++ ;  $_ | select @{n='Index';e={$index1}},DayOfWeek,@{n='DateF';e={$_.ToShortDateString()}},Date}
 
-
+Write-Host "Collecting Cinema data..."
 $finalReport = $()
 foreach ($SearchDate in $RangeOfDatesFormatted){
 
@@ -274,6 +274,8 @@ foreach ($SearchDate in $RangeOfDatesFormatted){
 
 }
 
+
+Write-Host "Preparing and exporting data.csv"
 
 $outputFormat = @(
     @{n='Movie Name'; e={$_.moviename}},
@@ -293,3 +295,16 @@ $FilteredMovies = $finalReport | select $outputFormat
 
 $FilteredMovies | Export-Csv '.\data.csv' -NoTypeInformation -Force
 #$FilteredMovies | Out-GridView
+
+
+Write-Host "Preparing and exporting data.csv"
+
+$MoviesList = $FilteredMovies | group 'movie name'
+
+$outputFormat2 = @(
+    @{n='Movie Name'; e={$_.name}},
+    @{n='Available Dates'; e={($_.Group | group 'date').Name -join '; '}},
+    @{n='Available Cinemas'; e={($_.Group | group 'Cinema Name').Name -join '; '}}
+)
+
+$MoviesList | select $outputFormat2 | Export-Csv '.\data2.csv' -NoTypeInformation -Force
