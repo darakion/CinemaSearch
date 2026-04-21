@@ -39,7 +39,7 @@ function Get-CinemaCity {
             $MoviesListCinemaCity = $($MoviesListCinemaCity;$response.body.films) | sort name -Unique
 
             $response.body.events | select @{n='MovieName';e={$event = $_ ; ($Response.body.films | where id -like $event.filmid).name}},
-                filmId,eventDateTime,auditorium,auditoriumTinyName,@{n='CinemaName';e={$Cinema.DisplayName}}
+                filmId,eventDateTime,auditorium,auditoriumTinyName,@{n='CinemaName';e={$Cinema.DisplayName}},@{n='CinemaDisplay';e={'CinemaCity'}}
 
         }
 
@@ -110,7 +110,7 @@ function Get-CineGrand {
             }
 
 
-            $CineGrandOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName
+            $CineGrandOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName,@{n='CinemaDisplay';e={'CineGrand'}}
 
         }
 
@@ -183,7 +183,7 @@ function Get-KinoArena {
 
             }
 
-            $KinoArenaOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName
+            $KinoArenaOutput | select MovieName,filmId,eventDateTime,auditorium,auditoriumTinyName,CinemaName,@{n='CinemaDisplay';e={'KinoArena'}}
 
         }
 
@@ -282,7 +282,8 @@ $outputFormat = @(
     @{n='Day'; e={$_.eventDateTime.DayOfWeek}},
     @{n='Time'; e={$_.eventDateTime.ToString("HH:mm")}},
     @{n='Screen'; e={if($_.auditoriumTinyName){$_.auditoriumTinyName} else{$_.auditorium}}},
-    @{n='Cinema Name'; e={$_.CinemaName}}
+    @{n='Cinema Name'; e={$_.CinemaName}},
+    'CinemaDisplay'
 )
 
 #$FilteredMovies | select $outputFormat | ft -AutoSize

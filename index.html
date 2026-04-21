@@ -113,6 +113,7 @@
       border: 1px solid #ddd;
       text-align: left;
       white-space: nowrap;
+      vertical-align: middle;
     }
 
     th {
@@ -120,6 +121,42 @@
       color: white;
       position: sticky;
       top: 0;
+    }
+
+    /* Icon wrapper with black background */
+    .icon-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      background: #000;
+      border-radius: 6px;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .cinema-icon {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+      display: block;
+      filter: none;
+    }
+
+    /* Movie cell to align icon + text */
+    .movie-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Colored row text helpers */
+    .row-text-dark {
+      color: #111 !important;
+    }
+    .row-text-light {
+      color: #fff !important;
     }
 
     /* CARD VIEW */
@@ -135,23 +172,26 @@
       border-radius: 12px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       border: 1px solid #e6e6e6;
+      display: flex;
+      gap: 12px;
+      align-items: center;
     }
 
-    .title {
+    .card .title {
       font-weight: bold;
       margin-bottom: 6px;
     }
 
-    .meta {
+    .card .meta {
       font-size: 14px;
-      color: #555;
+      color: inherit;
       line-height: 1.4;
     }
 
-    .cinema {
+    .card .cinema {
       margin-top: 6px;
       font-size: 13px;
-      opacity: 0.8;
+      opacity: 0.9;
     }
 
     /* TOGGLE MODE */
@@ -196,6 +236,11 @@
         display: inline-block;
         margin-top: 8px;
         text-align: center;
+      }
+
+      .card {
+        flex-direction: column;
+        align-items: flex-start;
       }
     }
   </style>
@@ -252,19 +297,58 @@
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <script>
+/* ---------- Configuration: mapping CinemaDisplay -> color & icon ---------- */
+const CINEMA_MAP = {
+  'kinoarena': {
+    color: '#FF151F',
+    icon: 'https://www.kinoarena.com/images/frontend/favicon.ico'
+  },
+  'cinegrand': {
+    color: '#B6922F',
+    icon: 'https://cinegrand.bg/include/cinegrand/img/favicon.ico'
+  },
+  'cinemacity': {
+    color: '#F5821E',
+    icon: 'https://www.cinemacity.bg/xmedia/img/10106/fav.png?v=v2.8.100-dirty'
+  }
+};
+
+/* ---------- Utilities ---------- */
+function normalizeKey(s) {
+  if (!s) return '';
+  return String(s).trim().toLowerCase();
+}
+
+/* Decide whether to use dark text on top of the background color */
+function isColorLight(hex) {
+  if (!hex) return false;
+  const c = hex.replace('#','');
+  if (c.length !== 6) return false;
+  const r = parseInt(c.substring(0,2),16);
+  const g = parseInt(c.substring(2,4),16);
+  const b = parseInt(c.substring(4,6),16);
+  const lum = 0.299*r + 0.587*g + 0.114*b;
+  return lum > 180;
+}
+
+/* ---------- Existing code (kept and integrated) ---------- */
 let allData = [];
 
 /* Normalize date */
 function normalizeDate(dateStr) {
   if (!dateStr) return "";
   const clean = dateStr.replace(" г.", "");
-  const [day, month, year] = clean.split(".");
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  const parts = clean.split(".");
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+  return "";
 }
 
 /* Sort helper */
 function parseDateTime(row) {
-  const date = row.normalizedDate;
+  const date = row.normalizedDate || "";
   const time = row["Time"] || "00:00";
   return new Date(`${date}T${time}:00`);
 }
@@ -372,14 +456,80 @@ function renderTable(data) {
   data.forEach(row => {
     const tr = document.createElement("tr");
 
-    tr.innerHTML = `
-      <td>${row["Movie Name"]}</td>
-      <td>${row["Day"]}</td>
-      <td>${row["Time"]}</td>
-      <td>${row["Date"]}</td>
-      <td>${row["Screen"]}</td>
-      <td>${row["Cinema Name"]}</td>
-    `;
+    // Determine mapping by CinemaDisplay first, fallback to Cinema Name
+    let key = normalizeKey(row["CinemaDisplay"] || "");
+    if (!key) key = normalizeKey(row["Cinema Name"] || "");
+    const mapping = CINEMA_MAP[key];
+
+    if (mapping && mapping.color) {
+      tr.style.backgroundColor = mapping.color;
+      // set text color for readability
+      if (isColorLight(mapping.color)) {
+        tr.classList.add('row-text-dark');
+      } else {
+        tr.classList.add('row-text-light');
+      }
+    }
+
+    // Build first cell with icon + movie name
+    const movieCell = document.createElement("td");
+    movieCell.setAttribute('data-label', 'Movie Name');
+    const movieWrapper = document.createElement("div");
+    movieWrapper.className = 'movie-cell';
+
+    // Icon (black background)
+    const iconWrap = document.createElement("span");
+    iconWrap.className = 'icon-wrap';
+    if (mapping && mapping.icon) {
+      const img = document.createElement("img");
+      img.className = 'cinema-icon';
+      img.src = mapping.icon;
+      img.alt = row["Cinema Name"] ? `${row["Cinema Name"]} icon` : 'cinema icon';
+      img.loading = 'lazy';
+      iconWrap.appendChild(img);
+    } else {
+      // placeholder (empty black square)
+      const placeholder = document.createElement("span");
+      placeholder.style.display = 'inline-block';
+      placeholder.style.width = '22px';
+      placeholder.style.height = '22px';
+      iconWrap.appendChild(placeholder);
+    }
+    movieWrapper.appendChild(iconWrap);
+
+    const movieText = document.createElement("span");
+    movieText.textContent = row["Movie Name"] || '';
+    movieWrapper.appendChild(movieText);
+    movieCell.appendChild(movieWrapper);
+
+    // Other cells
+    const dayCell = document.createElement("td");
+    dayCell.setAttribute('data-label', 'Day');
+    dayCell.textContent = row["Day"] || '';
+
+    const timeCell = document.createElement("td");
+    timeCell.setAttribute('data-label', 'Time');
+    timeCell.textContent = row["Time"] || '';
+
+    const dateCell = document.createElement("td");
+    dateCell.setAttribute('data-label', 'Date');
+    dateCell.textContent = row["Date"] || '';
+
+    const screenCell = document.createElement("td");
+    screenCell.setAttribute('data-label', 'Screen');
+    screenCell.textContent = row["Screen"] || '';
+
+    const cinemaCell = document.createElement("td");
+    cinemaCell.setAttribute('data-label', 'Cinema Name');
+    cinemaCell.textContent = row["Cinema Name"] || '';
+
+    // Append cells to row
+    tr.appendChild(movieCell);
+    tr.appendChild(dayCell);
+    tr.appendChild(timeCell);
+    tr.appendChild(dateCell);
+    tr.appendChild(screenCell);
+    tr.appendChild(cinemaCell);
 
     tbody.appendChild(tr);
   });
@@ -394,15 +544,60 @@ function renderGrid(data) {
     const card = document.createElement("div");
     card.className = "card";
 
-    card.innerHTML = `
-      <div class="title">${row["Movie Name"]}</div>
-      <div class="meta">
-        🕒 ${row["Time"]} · ${row["Day"]}<br>
-        📅 ${row["Date"]}<br>
-        🎬 ${row["Screen"]}
-      </div>
-      <div class="cinema">${row["Cinema Name"]}</div>
-    `;
+    // Determine mapping by CinemaDisplay first, fallback to Cinema Name
+    let key = normalizeKey(row["CinemaDisplay"] || "");
+    if (!key) key = normalizeKey(row["Cinema Name"] || "");
+    const mapping = CINEMA_MAP[key];
+
+    if (mapping && mapping.color) {
+      card.style.backgroundColor = mapping.color;
+      if (isColorLight(mapping.color)) {
+        card.classList.add('row-text-dark');
+      } else {
+        card.classList.add('row-text-light');
+      }
+    }
+
+    // Icon
+    const iconWrap = document.createElement("span");
+    iconWrap.className = 'icon-wrap';
+    if (mapping && mapping.icon) {
+      const img = document.createElement("img");
+      img.className = 'cinema-icon';
+      img.src = mapping.icon;
+      img.alt = row["Cinema Name"] ? `${row["Cinema Name"]} icon` : 'cinema icon';
+      img.loading = 'lazy';
+      iconWrap.appendChild(img);
+    } else {
+      const placeholder = document.createElement("span");
+      placeholder.style.display = 'inline-block';
+      placeholder.style.width = '22px';
+      placeholder.style.height = '22px';
+      iconWrap.appendChild(placeholder);
+    }
+
+    // Content container
+    const content = document.createElement("div");
+    content.style.flex = "1";
+
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = row["Movie Name"] || '';
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `🕒 ${row["Time"] || ''} · ${row["Day"] || ''}<br>📅 ${row["Date"] || ''}<br>🎬 ${row["Screen"] || ''}`;
+
+    const cinema = document.createElement("div");
+    cinema.className = "cinema";
+    cinema.textContent = row["Cinema Name"] || '';
+
+    content.appendChild(title);
+    content.appendChild(meta);
+    content.appendChild(cinema);
+
+    card.appendChild(iconWrap);
+    card.appendChild(content);
 
     grid.appendChild(card);
   });
