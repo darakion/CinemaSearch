@@ -130,6 +130,11 @@
       top: 0;
     }
 
+    /* Allow wrapping inside movies table cells (so cinema lists don't force horizontal expansion) */
+    .movies-table td {
+      white-space: normal;
+    }
+
     /* Icon wrapper with black background */
     .icon-wrap {
       display: inline-flex;
@@ -240,6 +245,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px 12px;
       align-items: start;
+      grid-auto-rows: auto;
     }
 
     .cinema-item {
@@ -249,6 +255,7 @@
       white-space: normal;
       font-size: 13px;
       color: inherit;
+      width: 100%;
     }
 
     .cinema-mini {
@@ -303,10 +310,11 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px 12px;
       align-items: start;
+      grid-auto-rows: auto;
     }
 
     .movie-card .movie-cinemas .cinema-item {
-      font-size: 13px;
+      width: 100%;
     }
 
     /* TOGGLE MODE: when body.card-mode show card views for both pages */
@@ -424,7 +432,7 @@
 <div id="moviesPage" class="movies-page">
   <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
     <div style="font-weight:700;">Movies Summary</div>
-    <!-- <div style="font-size:13px; color:#555;">(data from <code>data2.csv</code>)</div> -->
+    <!--<div style="font-size:13px; color:#555;">(data from <code>data2.csv</code>)</div>-->
   </div>
 
   <div class="movies-table-wrapper">
@@ -922,16 +930,10 @@ function renderMoviesGrid(data) {
       cinemasWrap.appendChild(item);
     });
 
-    // textual list below icons for clarity (optional)
-    const textList = document.createElement("div");
-    textList.style.fontSize = "13px";
-    textList.style.opacity = "0.9";
-    textList.textContent = cinemas.join("; ");
-
+    // Note: removed the textual "cinemas.join" string to avoid duplicate listing
     card.appendChild(title);
     card.appendChild(datesEl);
     card.appendChild(cinemasWrap);
-    card.appendChild(textList);
 
     grid.appendChild(card);
   });
