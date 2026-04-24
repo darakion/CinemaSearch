@@ -248,14 +248,22 @@ $ListOfCinemas = [pscustomobject]@{
 $Today = (Get-Date)
 $ListOfDates = @()
 $ListOfDates += $Today
-$ListOfDates += 1..7 | foreach {(Get-date).AddDays($_)}
+$ListOfDates += 1..14 | foreach {(Get-date).AddDays($_)}
 
-$Thursday = $ListOfDates | where DayOfWeek -like "Thursday" | select -Last 1
+#$ListOfDates += 1..7 | foreach {(Get-date).AddDays($_)}
 
-$RangeOfDates = $ListOfDates | where {$_ -ge $Today -and $_ -le $Thursday}
+
+
+
+#$Thursday = $ListOfDates | where DayOfWeek -like "Thursday" | select -Last 1
+
+#$RangeOfDates = $ListOfDates | where {$_ -ge $Today -and $_ -le $Thursday}
+
+
+
 
 $index1 = 0
-$RangeOfDatesFormatted = $RangeOfDates | foreach {$index1++ ;  $_ | select @{n='Index';e={$index1}},DayOfWeek,@{n='DateF';e={$_.ToShortDateString()}},Date}
+$RangeOfDatesFormatted = $ListOfDates | foreach {$index1++ ;  $_ | select @{n='Index';e={$index1}},DayOfWeek,@{n='DateF';e={$_.ToShortDateString()}},Date}
 
 Write-Host "Collecting Cinema data..."
 $finalReport = $()
@@ -303,7 +311,7 @@ $MoviesList = $FilteredMovies | group 'movie name'
 
 $outputFormat2 = @(
     @{n='Movie Name'; e={$_.name}},
-    @{n='Available Dates'; e={($_.Group | group 'date').Name -join '; '}},
+    @{n='Available Dates'; e={((($_.Group | group 'date').Name | foreach {[datetime]::ParseExact($_, 'd.M.yyyy', $null)} | sort | foreach {$_.ToString('d.M.yyyy')}) -join '; ')}},
     @{n='Available Cinemas'; e={($_.Group | group 'Cinema Name').Name -join '; '}}
 )
 
