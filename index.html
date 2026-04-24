@@ -156,6 +156,19 @@
       filter: none;
     }
 
+    /*Convert string of dates to chips*/
+    .date-chip {
+      display: inline-block;
+      padding: 3px 6px;
+      margin: 2px 4px 2px 0;
+      font-size: 12px;
+      border-radius: 6px;
+      background: #eee;
+      border: 1px solid #ddd;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
     /* Movie cell to align icon + text */
     .movie-cell {
       display: flex;
@@ -821,7 +834,9 @@ function renderMoviesTable(data) {
 
     const datesTd = document.createElement("td");
     const dates = (row["Available Dates"] || "").split(";").map(s => s.trim()).filter(Boolean);
-    datesTd.textContent = dates.join("; ");
+    datesTd.innerHTML = dates
+      .map(d => `<span class="date-chip">${d}</span>`)
+      .join("");
 
     const cinemasTd = document.createElement("td");
 
@@ -902,7 +917,9 @@ function renderMoviesGrid(data) {
     const dates = (row["Available Dates"] || "").split(";").map(s => s.trim()).filter(Boolean);
     const datesEl = document.createElement("div");
     datesEl.className = "movie-dates";
-    datesEl.textContent = dates.join("; ");
+    datesEl.innerHTML = dates
+      .map(d => `<span class="date-chip">${d}</span>`)
+      .join("");
 
     // build array, trim and remove empty entries
     const cinemas = (row["Available Cinemas"] || "")
