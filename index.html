@@ -430,9 +430,16 @@
 
 <!-- MOVIES SUMMARY PAGE -->
 <div id="moviesPage" class="movies-page">
-  <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+  <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px; flex-wrap: wrap;">
     <div style="font-weight:700;">Movies Summary</div>
-    <!--<div style="font-size:13px; color:#555;">(data from <code>data2.csv</code>)</div>-->
+
+    <input 
+      type="text" 
+      id="moviesFilter" 
+      placeholder="Search movie..." 
+      style="padding:8px; font-size:14px;"
+      aria-label="Search movie summary"
+    >
   </div>
 
   <div class="movies-table-wrapper">
@@ -622,6 +629,17 @@ function applyFilters() {
     .sort((a, b) => parseDateTime(a) - parseDateTime(b));
 
   renderAll(filtered);
+}
+
+function applyMoviesFilter() {
+  const query = document.getElementById("moviesFilter").value.toLowerCase();
+
+  const filtered = moviesData.filter(r =>
+    !query || (r["Movie Name"] || "").toLowerCase().includes(query)
+  );
+
+  renderMoviesTable(filtered);
+  renderMoviesGrid(filtered);
 }
 
 /* RENDER BOTH VIEWS (showtimes) */
@@ -1016,6 +1034,11 @@ function togglePage() {
     btn.textContent = 'Switch to Showtimes';
     currentPage = 'movies';
     updateLastRefresh("data2.csv");
+
+    document.getElementById("moviesFilter").value = "";
+    renderMoviesTable(moviesData);
+    renderMoviesGrid(moviesData);
+
     // ensure movies view respects current layout mode
     syncMoviesLayout();
   } else {
@@ -1069,6 +1092,7 @@ function toggleLayout() {
 document.getElementById("cinemaFilter").addEventListener("change", applyFilters);
 document.getElementById("dateFilter").addEventListener("change", applyFilters);
 document.getElementById("movieFilter").addEventListener("input", applyFilters);
+document.getElementById("moviesFilter").addEventListener("input", applyMoviesFilter);
 
 // Recalculate cinema width on resize (debounced)
 let resizeTimer;
